@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  pocketbase:
+    build:
+      context: ../pb
+      dockerfile: ../infra/Dockerfile.pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+      - ../pb/migrations:/pb/migrations
+    environment:
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@liquorjournal.app}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-changeme123}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pb_data:
+    driver: local
+
+networks:
+  default:
+    name: liquor_journal_network

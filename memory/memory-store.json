@@ -1,0 +1,16 @@
+{
+  "default": [
+    {
+      "key": "project/name",
+      "value": "Liquor Journal",
+      "namespace": "default",
+      "timestamp": 1752010639530
+    },
+    {
+      "key": "project/type",
+      "value": "Flutter + PocketBase",
+      "namespace": "default",
+      "timestamp": 1752010647999
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Flutter app specific
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+app/ios/Flutter/.last_build_id
+app/android/local.properties
+app/ios/Flutter/flutter_export_environment.sh
+
+# PocketBase
+pb/pb_data/
+*.db
+*.db-shm
+*.db-wal
+pb_data/
+pb_public/
+
+# Docker
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# macOS
+.DS_Store
+*.plist
+
+# Coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+
+# Testing
+test-results/
+playwright-report/
+
+# Build outputs
+dist/
+build/
+out/
+
+# IDE
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
