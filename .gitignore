@@ -44,6 +44,10 @@ app/ios/Flutter/flutter_export_environment.sh
 
 # PocketBase
 pb/pb_data/
+pb/pocketbase
+pb/pocketbase.log
+pb/CHANGELOG.md
+pb/LICENSE.md
 *.db
 *.db-shm
 *.db-wal

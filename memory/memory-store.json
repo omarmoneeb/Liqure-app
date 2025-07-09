@@ -11,6 +11,12 @@
       "value": "Flutter + PocketBase",
       "namespace": "default",
       "timestamp": 1752010647999
+    },
+    {
+      "key": "backend/collections",
+      "value": "users,drinks,ingredients,drink_ingredients,ratings,inventory,badges",
+      "namespace": "default",
+      "timestamp": 1752059110563
     }
   ]
 }
