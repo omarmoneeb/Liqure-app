@@ -11,8 +11,8 @@ services:
       - pb_data:/pb/pb_data
       - ../pb/migrations:/pb/migrations
     environment:
-      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL:-admin@liquorjournal.app}
-      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD:-changeme123}
+      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL}
+      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/api/health"]

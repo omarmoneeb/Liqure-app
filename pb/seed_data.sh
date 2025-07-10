@@ -3,9 +3,9 @@
 # PocketBase Seed Data Script
 # This script adds sample data to test the collections
 
-PB_URL="http://localhost:8090"
-ADMIN_EMAIL="admin@liquorjournal.app"
-ADMIN_PASSWORD="liquorjournal123!"
+PB_URL="${PB_URL:-http://localhost:8090}"
+ADMIN_EMAIL="${PB_ADMIN_EMAIL:-admin@example.com}"
+ADMIN_PASSWORD="${PB_ADMIN_PASSWORD:-changeme}"
 
 echo "Adding seed data to PocketBase..."
 

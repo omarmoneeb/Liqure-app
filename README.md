@@ -23,9 +23,33 @@ A Flutter-based mobile application for tracking and rating spirits, cocktails, a
 
 ### Development Setup
 
-1. **Backend (PocketBase)**
+#### Environment Configuration
+
+1. **Create environment file**
+   ```bash
+   cp infra/.env.example infra/.env
+   ```
+
+2. **⚠️ IMPORTANT: Update credentials in `.env` file**
+   ```bash
+   # Edit infra/.env and set secure credentials:
+   PB_ADMIN_EMAIL=your-admin@example.com
+   PB_ADMIN_PASSWORD=your-secure-password-here
+   ```
+
+#### Backend Setup
+
+1. **Option A: Using Docker (Recommended)**
+   ```bash
+   cd infra
+   docker-compose up -d
+   ```
+
+2. **Option B: Manual PocketBase**
    ```bash
    cd pb
+   export PB_ADMIN_EMAIL="your-admin@example.com"
+   export PB_ADMIN_PASSWORD="your-secure-password"
    ./pocketbase serve --http 127.0.0.1:8090
    ```
 
