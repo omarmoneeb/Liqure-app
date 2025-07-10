@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import '../../domain/entities/drink.dart';
 import '../../domain/repositories/drinks_repository.dart';
 import '../models/drink_model.dart';
@@ -325,6 +326,188 @@ class DrinksRepositoryImpl implements DrinksRepository {
           .toList();
     } catch (e) {
       throw Exception('Failed to get recent drinks: ${e.toString()}');
+    }
+  }
+  
+  @override
+  Future<Map<String, Drink>> getBatchDrinks(List<String> ids) async {
+    print('🍺 DrinksRepository: getBatchDrinks called with ${ids.length} IDs');
+    try {
+      if (ids.isEmpty) return {};
+      
+      // Create filter for multiple IDs using OR conditions
+      final idFilters = ids.map((id) => 'id = "$id"').join(' || ');
+      final filterString = '($idFilters)';
+      
+      print('🍺 DrinksRepository: Batch filter: $filterString');
+      
+      final records = await _pocketBaseClient.instance
+          .collection('drinks')
+          .getList(
+            page: 1,
+            perPage: ids.length, // Ensure we get all requested drinks
+            filter: filterString,
+          );
+      
+      print('🍺 DrinksRepository: Batch query returned ${records.items.length} records');
+      
+      final drinks = <String, Drink>{};
+      for (final record in records.items) {
+        final drink = DrinkModel.fromPocketBase(record.toJson()).toEntity();
+        drinks[drink.id] = drink;
+      }
+      
+      return drinks;
+    } catch (e) {
+      print('❌ DrinksRepository: Error in getBatchDrinks(): $e');
+      throw Exception('Failed to get batch drinks: ${e.toString()}');
+    }
+  }
+  
+  @override
+  Future<List<Map<String, dynamic>>> getDrinksWithStats({
+    List<String>? drinkIds,
+    String? userId,
+    DrinkType? type,
+    int? limit,
+  }) async {
+    try {
+      final filters = <String>[];
+      
+      if (drinkIds != null && drinkIds.isNotEmpty) {
+        final idFilters = drinkIds.map((id) => 'id = "$id"').join(' || ');
+        filters.add('($idFilters)');
+      }
+      
+      if (type != null) {
+        filters.add('type = "${type.name}"');
+      }
+      
+      final filterString = filters.isNotEmpty ? filters.join(' && ') : '';
+      
+      // For now, fetch drinks and calculate stats separately
+      // In a production setup, this would be optimized with database views or stored procedures
+      final records = await _pocketBaseClient.instance
+          .collection('drinks')
+          .getList(
+            page: 1,
+            perPage: limit ?? 100,
+            filter: filterString,
+            sort: '-created',
+          );
+      
+      final results = <Map<String, dynamic>>[];
+      
+      for (final record in records.items) {
+        final drink = DrinkModel.fromPocketBase(record.toJson()).toEntity();
+        
+        // Get basic rating statistics for the drink
+        final ratingsQuery = await _pocketBaseClient.instance
+            .collection('ratings')
+            .getList(
+              filter: 'drink = "${drink.id}"',
+              perPage: 500, // Reasonable limit for rating count
+            );
+        
+        final ratings = ratingsQuery.items.map((r) => r.data['rating'] as double?).where((r) => r != null).cast<double>().toList();
+        
+        final avgRating = ratings.isNotEmpty ? ratings.reduce((a, b) => a + b) / ratings.length : null;
+        
+        results.add({
+          'drink': drink,
+          'averageRating': avgRating,
+          'ratingCount': ratings.length,
+          'hasUserRating': userId != null ? await _hasUserRating(drink.id, userId) : false,
+        });
+      }
+      
+      return results;
+    } catch (e) {
+      throw Exception('Failed to get drinks with stats: ${e.toString()}');
+    }
+  }
+  
+  @override
+  Future<Map<String, dynamic>> getDrinkAggregateStats({
+    List<String>? drinkIds,
+    String? userId,
+    DateTimeRange? dateRange,
+  }) async {
+    try {
+      final filters = <String>[];
+      
+      if (drinkIds != null && drinkIds.isNotEmpty) {
+        final idFilters = drinkIds.map((id) => 'drink = "$id"').join(' || ');
+        filters.add('($idFilters)');
+      }
+      
+      if (userId != null) {
+        filters.add('user = "$userId"');
+      }
+      
+      if (dateRange != null) {
+        final startDate = dateRange.start.toIso8601String();
+        final endDate = dateRange.end.toIso8601String();
+        filters.add('created >= "$startDate" && created <= "$endDate"');
+      }
+      
+      final filterString = filters.isNotEmpty ? filters.join(' && ') : '';
+      
+      // Fetch all relevant ratings
+      final ratingsQuery = await _pocketBaseClient.instance
+          .collection('ratings')
+          .getList(
+            filter: filterString,
+            perPage: 500,
+            expand: 'drink',
+          );
+      
+      // Calculate aggregate statistics
+      final ratings = ratingsQuery.items.map((r) => r.data['rating'] as double?).where((r) => r != null).cast<double>().toList();
+      final drinkTypeCount = <String, int>{};
+      final countryCount = <String, int>{};
+      
+      for (final item in ratingsQuery.items) {
+        final drinkData = item.expand?['drink']?.first;
+        if (drinkData != null) {
+          final type = drinkData.data['type'] as String?;
+          final country = drinkData.data['country'] as String?;
+          
+          if (type != null) {
+            drinkTypeCount[type] = (drinkTypeCount[type] ?? 0) + 1;
+          }
+          if (country != null && country.isNotEmpty) {
+            countryCount[country] = (countryCount[country] ?? 0) + 1;
+          }
+        }
+      }
+      
+      return {
+        'totalRatings': ratings.length,
+        'averageRating': ratings.isNotEmpty ? ratings.reduce((a, b) => a + b) / ratings.length : 0.0,
+        'minRating': ratings.isNotEmpty ? ratings.reduce((a, b) => a < b ? a : b) : 0.0,
+        'maxRating': ratings.isNotEmpty ? ratings.reduce((a, b) => a > b ? a : b) : 0.0,
+        'drinkTypeBreakdown': drinkTypeCount,
+        'countryBreakdown': countryCount,
+        'uniqueDrinks': drinkIds?.length ?? ratingsQuery.items.map((r) => r.data['drink']).toSet().length,
+      };
+    } catch (e) {
+      throw Exception('Failed to get drink aggregate stats: ${e.toString()}');
+    }
+  }
+  
+  Future<bool> _hasUserRating(String drinkId, String userId) async {
+    try {
+      final ratingsQuery = await _pocketBaseClient.instance
+          .collection('ratings')
+          .getList(
+            filter: 'drink = "$drinkId" && user = "$userId"',
+            perPage: 1,
+          );
+      
+      return ratingsQuery.items.isNotEmpty;
+    } catch (e) {
+      return false;
     }
   }
 }

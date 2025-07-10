@@ -98,23 +98,162 @@ final userFavoriteTypesProvider = FutureProvider.autoDispose<List<MapEntry<Drink
   return sortedTypes.take(5).toList();
 });
 
+/// Utility provider to refresh dashboard data after rating changes
+final dashboardRefreshProvider = Provider<void Function()>((ref) {
+  return () {
+    print('🔄 Dashboard: Refreshing all dashboard data');
+    ref.invalidate(userStatisticsProvider);
+    ref.invalidate(userRecentActivityProvider);
+    ref.invalidate(userFavoriteTypesProvider);
+    print('🔄 Dashboard: All providers invalidated');
+  };
+});
+
+/// Provider for performance-optimized statistics using enhanced repository methods
+final optimizedUserStatisticsProvider = FutureProvider.autoDispose<UserStatistics>((ref) async {
+  print('📊 Dashboard: optimizedUserStatisticsProvider called');
+  
+  try {
+    final authState = ref.watch(authProvider);
+    if (authState.user == null) {
+      print('❌ Dashboard: No authenticated user');
+      return const UserStatistics();
+    }
+
+    final userId = authState.user!.id;
+    print('📊 Dashboard: Getting optimized statistics for user: $userId');
+
+    // Use the new optimized aggregate stats method for better performance
+    final ratingsRepository = ref.read(ratingsRepositoryProvider);
+    final aggregateStats = await ratingsRepository.getUserAggregateStats(userId);
+    print('📊 Dashboard: Retrieved aggregate stats in single optimized query');
+
+    // Get recent activity efficiently for activity calculations
+    final recentRatings = await ratingsRepository.getRecentRatings(userId, limit: 100);
+    final activityStats = _calculateActivityStatistics(recentRatings);
+    print('📊 Dashboard: Calculated activity statistics');
+
+    // Extract data from aggregate stats (from single optimized query)
+    final totalRatings = aggregateStats['totalRatings'] as int? ?? 0;
+    final averageRating = aggregateStats['averageRating'] as double? ?? 0.0;
+    final highestRating = aggregateStats['highestRating'] as double? ?? 0.0;
+    final lowestRating = aggregateStats['lowestRating'] as double? ?? 0.0;
+    final uniqueDrinks = aggregateStats['uniqueDrinks'] as int? ?? 0;
+    final uniqueCountries = aggregateStats['uniqueCountries'] as int? ?? 0;
+    
+    final typeBreakdownRaw = aggregateStats['drinkTypeBreakdown'] as Map<String, int>? ?? {};
+    final countryBreakdownRaw = aggregateStats['countryBreakdown'] as Map<String, int>? ?? {};
+    final ratingDistribution = aggregateStats['ratingDistribution'] as Map<int, int>? ?? {};
+    final favoriteTypeStr = aggregateStats['favoriteType'] as String?;
+    final favoriteCountry = aggregateStats['favoriteCountry'] as String?;
+
+    // Convert type breakdown to proper enum mapping
+    final typeBreakdown = <DrinkType, int>{};
+    for (final entry in typeBreakdownRaw.entries) {
+      try {
+        final drinkType = DrinkType.values.firstWhere((type) => type.name == entry.key);
+        typeBreakdown[drinkType] = entry.value;
+      } catch (e) {
+        print('⚠️ Dashboard: Unknown drink type: ${entry.key}');
+      }
+    }
+
+    // Convert favorite type string to enum
+    DrinkType? favoriteType;
+    if (favoriteTypeStr != null) {
+      try {
+        favoriteType = DrinkType.values.firstWhere((type) => type.name == favoriteTypeStr);
+      } catch (e) {
+        print('⚠️ Dashboard: Unknown favorite type: $favoriteTypeStr');
+      }
+    }
+
+    // Calculate achievements with optimized data
+    final achievements = _calculateAchievements(recentRatings, {
+      'uniqueDrinks': uniqueDrinks,
+      'typeBreakdown': typeBreakdown,
+      'countryBreakdown': countryBreakdownRaw,
+      'favoriteType': favoriteType,
+      'favoriteCountry': favoriteCountry,
+      'averageAbv': 0.0, // TODO: Add ABV calculation to aggregate stats
+    });
+
+    // Return comprehensive statistics built from optimized single queries
+    final statistics = UserStatistics(
+      totalRatings: totalRatings,
+      averageRating: averageRating,
+      drinksRated: uniqueDrinks,
+      uniqueCountries: uniqueCountries,
+      favoriteType: favoriteType,
+      favoriteCountry: favoriteCountry,
+      typeBreakdown: typeBreakdown,
+      countryBreakdown: countryBreakdownRaw,
+      ratingDistribution: ratingDistribution,
+      ratingsThisWeek: activityStats['thisWeek'] as int? ?? 0,
+      ratingsThisMonth: activityStats['thisMonth'] as int? ?? 0,
+      currentStreak: activityStats['currentStreak'] as int? ?? 0,
+      longestStreak: activityStats['longestStreak'] as int? ?? 0,
+      achievements: achievements,
+      totalAchievements: achievements.length,
+      averageAbv: 0.0, // TODO: Add ABV calculation to aggregate stats
+      highestRating: highestRating,
+      lowestRating: lowestRating,
+    );
+
+    print('📊 Dashboard: Final optimized statistics calculated successfully');
+    return statistics;
+  } catch (e, stackTrace) {
+    print('❌ Dashboard: Error in optimizedUserStatisticsProvider: $e');
+    print('❌ Dashboard: StackTrace: $stackTrace');
+    throw Exception('Failed to load optimized user statistics: $e');
+  }
+});
+
 /// Helper function to calculate drink-related statistics
+/// OPTIMIZED: Uses batch fetching instead of N+1 queries
 Future<Map<String, dynamic>> _calculateDrinkStatistics(
   Ref ref, 
   List<Rating> userRatings
 ) async {
+  print('📊 Dashboard: Calculating drink statistics for ${userRatings.length} ratings');
+  
   final typeBreakdown = <DrinkType, int>{};
   final countryBreakdown = <String, int>{};
   final abvValues = <double>[];
   
+  if (userRatings.isEmpty) {
+    return {
+      'typeBreakdown': typeBreakdown,
+      'countryBreakdown': countryBreakdown,
+      'averageAbv': 0.0,
+      'uniqueCountries': 0,
+      'favoriteType': null,
+      'favoriteCountry': null,
+    };
+  }
+  
   // Get drinks repository to fetch drink details
   final drinksRepository = ref.watch(drinksRepositoryProvider);
   
-  // Fetch drink details for each rating
+  // Extract unique drink IDs from ratings
+  final drinkIds = userRatings
+      .where((rating) => rating.drinkId != null)
+      .map((rating) => rating.drinkId!)
+      .toSet()
+      .toList();
+  
+  print('📊 Dashboard: Fetching ${drinkIds.length} unique drinks in batch');
+  
+  // OPTIMIZATION: Fetch all drinks in a single batch query instead of N+1 queries
+  final drinksMap = await drinksRepository.getBatchDrinks(drinkIds);
+  
+  print('📊 Dashboard: Successfully fetched ${drinksMap.length} drinks');
+  
+  // Process each rating with the fetched drinks
   for (final rating in userRatings) {
     try {
       if (rating.drinkId != null) {
-        final drink = await drinksRepository.getDrinkById(rating.drinkId!);
+        final drink = drinksMap[rating.drinkId!];
         
         if (drink != null) {
           // Count drink types
@@ -132,7 +271,7 @@ Future<Map<String, dynamic>> _calculateDrinkStatistics(
         }
       }
     } catch (e) {
-      print('Error fetching drink details for rating ${rating.id}: $e');
+      print('Error processing rating ${rating.id}: $e');
       // Continue processing other ratings even if one fails
     }
   }

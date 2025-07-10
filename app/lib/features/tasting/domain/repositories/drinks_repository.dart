@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import '../entities/drink.dart';
 
 abstract class DrinksRepository {
@@ -32,4 +33,22 @@ abstract class DrinksRepository {
   
   /// Get recently added drinks
   Future<List<Drink>> getRecentDrinks({int limit = 10});
+  
+  /// Get multiple drinks by IDs in a single batch operation
+  Future<Map<String, Drink>> getBatchDrinks(List<String> ids);
+  
+  /// Get drinks with aggregated statistics
+  Future<List<Map<String, dynamic>>> getDrinksWithStats({
+    List<String>? drinkIds,
+    String? userId,
+    DrinkType? type,
+    int? limit,
+  });
+  
+  /// Get aggregate statistics for drinks
+  Future<Map<String, dynamic>> getDrinkAggregateStats({
+    List<String>? drinkIds,
+    String? userId,
+    DateTimeRange? dateRange,
+  });
 }

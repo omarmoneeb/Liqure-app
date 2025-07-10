@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/rating.dart';
 import '../providers/tasting_providers.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import 'rating_widget.dart';
 
 class RatingSubmissionDialog extends ConsumerStatefulWidget {
@@ -234,6 +235,11 @@ class _RatingSubmissionDialogState extends ConsumerState<RatingSubmissionDialog>
       ref.refresh(userDrinkRatingProvider(widget.drinkId));
       ref.refresh(drinkAverageRatingProvider(widget.drinkId));
       ref.refresh(drinkRatingsProvider(widget.drinkId));
+      
+      // REAL-TIME DASHBOARD UPDATES: Refresh dashboard statistics after rating changes
+      final dashboardRefresh = ref.read(dashboardRefreshProvider);
+      dashboardRefresh();
+      print('🔄 Rating: Dashboard refresh triggered after rating submission');
 
       if (mounted) {
         Navigator.of(context).pop();

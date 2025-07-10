@@ -33,4 +33,26 @@ abstract class RatingsRepository {
   
   /// Get rating statistics for user
   Future<Map<String, dynamic>> getUserRatingStats(String userId);
+  
+  /// Get comprehensive user statistics with better performance
+  Future<Map<String, dynamic>> getUserAggregateStats(String userId);
+  
+  /// Get batch rating statistics for multiple drinks
+  Future<Map<String, Map<String, dynamic>>> getBatchDrinkStats(List<String> drinkIds);
+  
+  /// Get ratings with drink details in a single query
+  Future<List<Map<String, dynamic>>> getRatingsWithDrinkDetails(String userId, {
+    int? limit,
+    String? orderBy,
+  });
+  
+  /// Get time-series rating data for analytics
+  Future<List<Map<String, dynamic>>> getRatingTimeSeries(String userId, {
+    DateTime? startDate,
+    DateTime? endDate,
+    String? groupBy, // 'day', 'week', 'month'
+  });
+  
+  /// Get rating distribution and analytics
+  Future<Map<String, dynamic>> getRatingAnalytics(String userId);
 }
