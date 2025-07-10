@@ -33,7 +33,9 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
     _controller = TextEditingController(text: widget.searchQuery);
     _focusNode.addListener(() {
       setState(() {
-        _showSuggestions = _focusNode.hasFocus && widget.searchSuggestions.isNotEmpty;
+        _showSuggestions = _focusNode.hasFocus && 
+                          widget.searchSuggestions.isNotEmpty && 
+                          _controller.text.isNotEmpty;
       });
     });
   }
@@ -55,10 +57,24 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Main search bar
-        Container(
+    return GestureDetector(
+      onTap: () {
+        // Dismiss suggestions when tapping outside
+        if (_showSuggestions) {
+          setState(() {
+            _showSuggestions = false;
+          });
+          _focusNode.unfocus();
+        }
+      },
+      child: Column(
+        children: [
+          // Main search bar
+          GestureDetector(
+            onTap: () {
+              // Prevent dismissal when tapping on search bar itself
+            },
+            child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -128,12 +144,17 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
               _focusNode.unfocus();
             },
           ),
-        ),
+            ),
+          ),
         
         // Search field selector
         if (_showFieldSelector) ...[
           const SizedBox(height: 8),
-          Card(
+          GestureDetector(
+            onTap: () {
+              // Prevent dismissal when tapping on field selector
+            },
+            child: Card(
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -181,13 +202,18 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
                 ],
               ),
             ),
+            ),
           ),
         ],
         
         // Search suggestions
         if (_showSuggestions) ...[
           const SizedBox(height: 8),
-          Card(
+          GestureDetector(
+            onTap: () {
+              // Prevent dismissal when tapping on suggestions
+            },
+            child: Card(
             elevation: 2,
             child: Container(
               constraints: const BoxConstraints(maxHeight: 200),
@@ -215,9 +241,11 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
                 },
               ),
             ),
+            ),
           ),
         ],
-      ],
+        ],
+      ),
     );
   }
 

@@ -429,23 +429,89 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
                   ],
                 ),
               ),
-              // Rating (placeholder)
-              Column(
-                children: [
-                  const Icon(Icons.star_border, color: Colors.amber),
-                  const SizedBox(height: 4),
-                  Text(
-                    '-',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
+              // Rating display
+              _buildRatingDisplay(drink.id),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRatingDisplay(String drinkId) {
+    final averageRatingAsync = ref.watch(drinkAverageRatingProvider(drinkId));
+    
+    return averageRatingAsync.when(
+      data: (averageRating) {
+        if (averageRating == null) {
+          // No ratings
+          return Column(
+            children: [
+              const Icon(Icons.star_border, color: Colors.grey),
+              const SizedBox(height: 4),
+              Text(
+                '-',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          );
+        } else {
+          // Has rating
+          return Column(
+            children: [
+              Icon(
+                averageRating >= 4.0 ? Icons.star : Icons.star_half,
+                color: Colors.amber,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                averageRating.toStringAsFixed(1),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        }
+      },
+      loading: () => Column(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '...',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+      error: (_, __) => Column(
+        children: [
+          const Icon(Icons.star_border, color: Colors.grey),
+          const SizedBox(height: 4),
+          Text(
+            '-',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
       ),
     );
   }
