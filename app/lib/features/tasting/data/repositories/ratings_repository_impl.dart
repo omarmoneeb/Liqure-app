@@ -93,7 +93,7 @@ class RatingsRepositoryImpl implements RatingsRepository {
         'user': ratingModel.user,
         'drink': ratingModel.drink,
         'score': ratingModel.score,
-        'note': ratingModel.note,
+        'notes': ratingModel.notes,
         'photos': ratingModel.photos,
       };
       
@@ -113,7 +113,7 @@ class RatingsRepositoryImpl implements RatingsRepository {
       final ratingModel = RatingModel.fromEntity(rating);
       final data = {
         'score': ratingModel.score,
-        'note': ratingModel.note,
+        'notes': ratingModel.notes,
         'photos': ratingModel.photos,
       };
       

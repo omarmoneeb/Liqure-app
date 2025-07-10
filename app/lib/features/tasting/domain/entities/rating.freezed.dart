@@ -19,8 +19,9 @@ mixin _$Rating {
   String get id => throw _privateConstructorUsedError;
   String get userId => throw _privateConstructorUsedError;
   String get drinkId => throw _privateConstructorUsedError;
-  double get score => throw _privateConstructorUsedError; // 1.0 to 5.0
-  String? get note => throw _privateConstructorUsedError;
+  double get rating =>
+      throw _privateConstructorUsedError; // 0.5 to 5.0 (half-star support)
+  String? get notes => throw _privateConstructorUsedError;
   List<String>? get photos => throw _privateConstructorUsedError;
   DateTime? get created => throw _privateConstructorUsedError;
   DateTime? get updated => throw _privateConstructorUsedError;
@@ -40,8 +41,8 @@ abstract class $RatingCopyWith<$Res> {
       {String id,
       String userId,
       String drinkId,
-      double score,
-      String? note,
+      double rating,
+      String? notes,
       List<String>? photos,
       DateTime? created,
       DateTime? updated});
@@ -65,8 +66,8 @@ class _$RatingCopyWithImpl<$Res, $Val extends Rating>
     Object? id = null,
     Object? userId = null,
     Object? drinkId = null,
-    Object? score = null,
-    Object? note = freezed,
+    Object? rating = null,
+    Object? notes = freezed,
     Object? photos = freezed,
     Object? created = freezed,
     Object? updated = freezed,
@@ -84,13 +85,13 @@ class _$RatingCopyWithImpl<$Res, $Val extends Rating>
           ? _value.drinkId
           : drinkId // ignore: cast_nullable_to_non_nullable
               as String,
-      score: null == score
-          ? _value.score
-          : score // ignore: cast_nullable_to_non_nullable
+      rating: null == rating
+          ? _value.rating
+          : rating // ignore: cast_nullable_to_non_nullable
               as double,
-      note: freezed == note
-          ? _value.note
-          : note // ignore: cast_nullable_to_non_nullable
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
               as String?,
       photos: freezed == photos
           ? _value.photos
@@ -119,8 +120,8 @@ abstract class _$$RatingImplCopyWith<$Res> implements $RatingCopyWith<$Res> {
       {String id,
       String userId,
       String drinkId,
-      double score,
-      String? note,
+      double rating,
+      String? notes,
       List<String>? photos,
       DateTime? created,
       DateTime? updated});
@@ -142,8 +143,8 @@ class __$$RatingImplCopyWithImpl<$Res>
     Object? id = null,
     Object? userId = null,
     Object? drinkId = null,
-    Object? score = null,
-    Object? note = freezed,
+    Object? rating = null,
+    Object? notes = freezed,
     Object? photos = freezed,
     Object? created = freezed,
     Object? updated = freezed,
@@ -161,13 +162,13 @@ class __$$RatingImplCopyWithImpl<$Res>
           ? _value.drinkId
           : drinkId // ignore: cast_nullable_to_non_nullable
               as String,
-      score: null == score
-          ? _value.score
-          : score // ignore: cast_nullable_to_non_nullable
+      rating: null == rating
+          ? _value.rating
+          : rating // ignore: cast_nullable_to_non_nullable
               as double,
-      note: freezed == note
-          ? _value.note
-          : note // ignore: cast_nullable_to_non_nullable
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
               as String?,
       photos: freezed == photos
           ? _value._photos
@@ -192,8 +193,8 @@ class _$RatingImpl implements _Rating {
       {required this.id,
       required this.userId,
       required this.drinkId,
-      required this.score,
-      this.note,
+      required this.rating,
+      this.notes,
       final List<String>? photos,
       this.created,
       this.updated})
@@ -206,10 +207,10 @@ class _$RatingImpl implements _Rating {
   @override
   final String drinkId;
   @override
-  final double score;
-// 1.0 to 5.0
+  final double rating;
+// 0.5 to 5.0 (half-star support)
   @override
-  final String? note;
+  final String? notes;
   final List<String>? _photos;
   @override
   List<String>? get photos {
@@ -227,7 +228,7 @@ class _$RatingImpl implements _Rating {
 
   @override
   String toString() {
-    return 'Rating(id: $id, userId: $userId, drinkId: $drinkId, score: $score, note: $note, photos: $photos, created: $created, updated: $updated)';
+    return 'Rating(id: $id, userId: $userId, drinkId: $drinkId, rating: $rating, notes: $notes, photos: $photos, created: $created, updated: $updated)';
   }
 
   @override
@@ -238,16 +239,16 @@ class _$RatingImpl implements _Rating {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.drinkId, drinkId) || other.drinkId == drinkId) &&
-            (identical(other.score, score) || other.score == score) &&
-            (identical(other.note, note) || other.note == note) &&
+            (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.notes, notes) || other.notes == notes) &&
             const DeepCollectionEquality().equals(other._photos, _photos) &&
             (identical(other.created, created) || other.created == created) &&
             (identical(other.updated, updated) || other.updated == updated));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, userId, drinkId, score, note,
-      const DeepCollectionEquality().hash(_photos), created, updated);
+  int get hashCode => Object.hash(runtimeType, id, userId, drinkId, rating,
+      notes, const DeepCollectionEquality().hash(_photos), created, updated);
 
   /// Create a copy of Rating
   /// with the given fields replaced by the non-null parameter values.
@@ -263,8 +264,8 @@ abstract class _Rating implements Rating {
       {required final String id,
       required final String userId,
       required final String drinkId,
-      required final double score,
-      final String? note,
+      required final double rating,
+      final String? notes,
       final List<String>? photos,
       final DateTime? created,
       final DateTime? updated}) = _$RatingImpl;
@@ -276,9 +277,9 @@ abstract class _Rating implements Rating {
   @override
   String get drinkId;
   @override
-  double get score; // 1.0 to 5.0
+  double get rating; // 0.5 to 5.0 (half-star support)
   @override
-  String? get note;
+  String? get notes;
   @override
   List<String>? get photos;
   @override

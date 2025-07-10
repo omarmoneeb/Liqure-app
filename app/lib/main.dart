@@ -6,6 +6,7 @@ import 'features/auth/presentation/pages/sign_up_page.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/debug/debug_page.dart';
 import 'features/tasting/presentation/pages/drinks_page.dart';
+import 'features/tasting/presentation/pages/drink_detail_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,6 +82,15 @@ class LiquorJournalApp extends ConsumerWidget {
         GoRoute(
           path: '/drinks',
           builder: (context, state) => const DrinksPage(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                final drinkId = state.pathParameters['id']!;
+                return DrinkDetailPage(drinkId: drinkId);
+              },
+            ),
+          ],
         ),
       ],
     );

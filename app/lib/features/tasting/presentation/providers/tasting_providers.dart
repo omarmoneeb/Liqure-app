@@ -181,6 +181,16 @@ class RatingNotifier extends StateNotifier<AsyncValue<Rating?>> {
       state = AsyncValue.error(e, StackTrace.current);
     }
   }
+  
+  Future<void> deleteRating(String ratingId) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repository.deleteRating(ratingId);
+      state = const AsyncValue.data(null);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
 }
 
 final drinkNotifierProvider = StateNotifierProvider<DrinkNotifier, AsyncValue<Drink?>>((ref) {

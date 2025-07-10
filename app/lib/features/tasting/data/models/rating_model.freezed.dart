@@ -24,7 +24,7 @@ mixin _$RatingModel {
   String get user => throw _privateConstructorUsedError;
   String get drink => throw _privateConstructorUsedError;
   double get score => throw _privateConstructorUsedError;
-  String? get note => throw _privateConstructorUsedError;
+  String? get notes => throw _privateConstructorUsedError;
   List<String>? get photos => throw _privateConstructorUsedError;
   DateTime? get created => throw _privateConstructorUsedError;
   DateTime? get updated => throw _privateConstructorUsedError;
@@ -50,7 +50,7 @@ abstract class $RatingModelCopyWith<$Res> {
       String user,
       String drink,
       double score,
-      String? note,
+      String? notes,
       List<String>? photos,
       DateTime? created,
       DateTime? updated});
@@ -75,7 +75,7 @@ class _$RatingModelCopyWithImpl<$Res, $Val extends RatingModel>
     Object? user = null,
     Object? drink = null,
     Object? score = null,
-    Object? note = freezed,
+    Object? notes = freezed,
     Object? photos = freezed,
     Object? created = freezed,
     Object? updated = freezed,
@@ -97,9 +97,9 @@ class _$RatingModelCopyWithImpl<$Res, $Val extends RatingModel>
           ? _value.score
           : score // ignore: cast_nullable_to_non_nullable
               as double,
-      note: freezed == note
-          ? _value.note
-          : note // ignore: cast_nullable_to_non_nullable
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
               as String?,
       photos: freezed == photos
           ? _value.photos
@@ -130,7 +130,7 @@ abstract class _$$RatingModelImplCopyWith<$Res>
       String user,
       String drink,
       double score,
-      String? note,
+      String? notes,
       List<String>? photos,
       DateTime? created,
       DateTime? updated});
@@ -153,7 +153,7 @@ class __$$RatingModelImplCopyWithImpl<$Res>
     Object? user = null,
     Object? drink = null,
     Object? score = null,
-    Object? note = freezed,
+    Object? notes = freezed,
     Object? photos = freezed,
     Object? created = freezed,
     Object? updated = freezed,
@@ -175,9 +175,9 @@ class __$$RatingModelImplCopyWithImpl<$Res>
           ? _value.score
           : score // ignore: cast_nullable_to_non_nullable
               as double,
-      note: freezed == note
-          ? _value.note
-          : note // ignore: cast_nullable_to_non_nullable
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
               as String?,
       photos: freezed == photos
           ? _value._photos
@@ -203,7 +203,7 @@ class _$RatingModelImpl extends _RatingModel {
       required this.user,
       required this.drink,
       required this.score,
-      this.note,
+      this.notes,
       final List<String>? photos,
       this.created,
       this.updated})
@@ -222,7 +222,7 @@ class _$RatingModelImpl extends _RatingModel {
   @override
   final double score;
   @override
-  final String? note;
+  final String? notes;
   final List<String>? _photos;
   @override
   List<String>? get photos {
@@ -240,7 +240,7 @@ class _$RatingModelImpl extends _RatingModel {
 
   @override
   String toString() {
-    return 'RatingModel(id: $id, user: $user, drink: $drink, score: $score, note: $note, photos: $photos, created: $created, updated: $updated)';
+    return 'RatingModel(id: $id, user: $user, drink: $drink, score: $score, notes: $notes, photos: $photos, created: $created, updated: $updated)';
   }
 
   @override
@@ -252,7 +252,7 @@ class _$RatingModelImpl extends _RatingModel {
             (identical(other.user, user) || other.user == user) &&
             (identical(other.drink, drink) || other.drink == drink) &&
             (identical(other.score, score) || other.score == score) &&
-            (identical(other.note, note) || other.note == note) &&
+            (identical(other.notes, notes) || other.notes == notes) &&
             const DeepCollectionEquality().equals(other._photos, _photos) &&
             (identical(other.created, created) || other.created == created) &&
             (identical(other.updated, updated) || other.updated == updated));
@@ -260,7 +260,7 @@ class _$RatingModelImpl extends _RatingModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, user, drink, score, note,
+  int get hashCode => Object.hash(runtimeType, id, user, drink, score, notes,
       const DeepCollectionEquality().hash(_photos), created, updated);
 
   /// Create a copy of RatingModel
@@ -285,7 +285,7 @@ abstract class _RatingModel extends RatingModel {
       required final String user,
       required final String drink,
       required final double score,
-      final String? note,
+      final String? notes,
       final List<String>? photos,
       final DateTime? created,
       final DateTime? updated}) = _$RatingModelImpl;
@@ -303,7 +303,7 @@ abstract class _RatingModel extends RatingModel {
   @override
   double get score;
   @override
-  String? get note;
+  String? get notes;
   @override
   List<String>? get photos;
   @override

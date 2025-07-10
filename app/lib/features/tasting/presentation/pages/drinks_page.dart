@@ -219,10 +219,8 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          // TODO: Navigate to drink detail page
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Viewing ${drink.name}')),
-          );
+          print('🔍 DrinksPage: Navigating to drink detail with id="${drink.id}", name="${drink.name}"');
+          context.go('/drinks/${drink.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(16),

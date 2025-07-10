@@ -12,7 +12,7 @@ _$RatingModelImpl _$$RatingModelImplFromJson(Map<String, dynamic> json) =>
       user: json['user'] as String,
       drink: json['drink'] as String,
       score: (json['score'] as num).toDouble(),
-      note: json['note'] as String?,
+      notes: json['notes'] as String?,
       photos:
           (json['photos'] as List<dynamic>?)?.map((e) => e as String).toList(),
       created: json['created'] == null
@@ -29,7 +29,7 @@ Map<String, dynamic> _$$RatingModelImplToJson(_$RatingModelImpl instance) =>
       'user': instance.user,
       'drink': instance.drink,
       'score': instance.score,
-      'note': instance.note,
+      'notes': instance.notes,
       'photos': instance.photos,
       'created': instance.created?.toIso8601String(),
       'updated': instance.updated?.toIso8601String(),

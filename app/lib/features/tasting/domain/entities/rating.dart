@@ -8,8 +8,8 @@ class Rating with _$Rating {
     required String id,
     required String userId,
     required String drinkId,
-    required double score, // 1.0 to 5.0
-    String? note,
+    required double rating, // 0.5 to 5.0 (half-star support)
+    String? notes,
     List<String>? photos,
     DateTime? created,
     DateTime? updated,
