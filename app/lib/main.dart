@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'features/auth/presentation/pages/sign_in_page.dart';
 import 'features/auth/presentation/pages/sign_up_page.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
+import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/debug/debug_page.dart';
 import 'features/tasting/presentation/pages/drinks_page.dart';
 import 'features/tasting/presentation/pages/drink_detail_page.dart';
@@ -73,7 +74,7 @@ class LiquorJournalApp extends ConsumerWidget {
         ),
         GoRoute(
           path: '/home',
-          builder: (context, state) => const HomePage(),
+          builder: (context, state) => const DashboardPage(),
         ),
         GoRoute(
           path: '/debug',
@@ -163,126 +164,3 @@ class SplashPage extends ConsumerWidget {
   }
 }
 
-// Temporary Home page
-class HomePage extends ConsumerWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () {
-              context.go('/debug');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              ref.read(authProvider.notifier).signOut();
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.wine_bar,
-              size: 80,
-              color: Colors.amber,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Welcome to Liquor Journal!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (authState.user != null) ...[
-              Text('Email: ${authState.user!.email}'),
-              if (authState.user!.username != null)
-                Text('Username: ${authState.user!.username}'),
-            ],
-            const SizedBox(height: 32),
-            const Text(
-              'Quick Actions:',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                children: [
-                  _buildActionButton(
-                    context,
-                    'Browse Drinks',
-                    Icons.wine_bar,
-                    Colors.amber,
-                    () => context.go('/drinks'),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionButton(
-                    context,
-                    'Add New Drink',
-                    Icons.add_circle,
-                    Colors.green,
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add drink feature coming soon!')),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionButton(
-                    context,
-                    'My Ratings',
-                    Icons.star,
-                    Colors.blue,
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ratings feature coming soon!')),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(title),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
-}
