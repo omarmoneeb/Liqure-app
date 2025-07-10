@@ -395,3 +395,36 @@ final ratingNotifierProvider = StateNotifierProvider<RatingNotifier, AsyncValue<
   final repository = ref.watch(ratingsRepositoryProvider);
   return RatingNotifier(repository);
 });
+
+/// Shared filter state provider for cross-page navigation
+class DrinksFilterNotifier extends StateNotifier<DrinksFilter> {
+  DrinksFilterNotifier() : super(const DrinksFilter());
+
+  void updateFilter(DrinksFilter filter) {
+    state = filter;
+  }
+
+  void resetFilter() {
+    state = const DrinksFilter();
+  }
+
+  void setTypeFilter(DrinkType type) {
+    state = state.copyWith(type: type);
+  }
+
+  void setCountryFilter(String country) {
+    state = state.copyWith(country: country);
+  }
+
+  void setRatingFilter({double? minRating, double? maxRating}) {
+    state = state.copyWith(minRating: minRating, maxRating: maxRating);
+  }
+
+  void setOnlyRatedFilter() {
+    state = state.copyWith(onlyRated: true, onlyUnrated: false);
+  }
+}
+
+final drinksFilterProvider = StateNotifierProvider<DrinksFilterNotifier, DrinksFilter>((ref) {
+  return DrinksFilterNotifier();
+});

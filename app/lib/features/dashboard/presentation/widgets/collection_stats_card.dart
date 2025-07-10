@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../tasting/domain/entities/drink.dart';
+import '../../../tasting/presentation/providers/tasting_providers.dart';
 import '../../domain/entities/user_statistics.dart';
 
-class CollectionStatsCard extends StatelessWidget {
+class CollectionStatsCard extends ConsumerWidget {
   final UserStatistics statistics;
   final bool isLoading;
 
@@ -13,7 +16,7 @@ class CollectionStatsCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -94,7 +97,8 @@ class CollectionStatsCard extends StatelessWidget {
                         Icons.wine_bar,
                         Colors.blue,
                         () {
-                          // Navigate to drinks with user's ratings filter
+                          ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+                          context.go('/drinks');
                         },
                       ),
                       const SizedBox(height: 8),
@@ -104,7 +108,12 @@ class CollectionStatsCard extends StatelessWidget {
                         Icons.public,
                         Colors.green,
                         () {
-                          // Navigate to drinks with countries filter
+                          if (statistics.favoriteCountry != null) {
+                            ref.read(drinksFilterProvider.notifier).setCountryFilter(statistics.favoriteCountry!);
+                          } else {
+                            ref.read(drinksFilterProvider.notifier).resetFilter();
+                          }
+                          context.go('/drinks');
                         },
                       ),
                       const SizedBox(height: 8),
@@ -114,7 +123,12 @@ class CollectionStatsCard extends StatelessWidget {
                         Icons.category,
                         Colors.orange,
                         () {
-                          // Navigate to drinks with types filter
+                          if (statistics.favoriteType != null) {
+                            ref.read(drinksFilterProvider.notifier).setTypeFilter(statistics.favoriteType!);
+                          } else {
+                            ref.read(drinksFilterProvider.notifier).resetFilter();
+                          }
+                          context.go('/drinks');
                         },
                       ),
                     ],

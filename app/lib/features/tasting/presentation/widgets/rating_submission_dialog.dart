@@ -78,6 +78,27 @@ class _RatingSubmissionDialogState extends ConsumerState<RatingSubmissionDialog>
               ),
             ),
             const SizedBox(height: 24),
+            
+            // Quick rating templates
+            const Text(
+              'Quick Rating',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _buildQuickRatingChip('Excellent', 5, Colors.green),
+                _buildQuickRatingChip('Good', 4, Colors.blue),
+                _buildQuickRatingChip('Average', 3, Colors.orange),
+                _buildQuickRatingChip('Poor', 2, Colors.red),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
             const Text(
               'Notes (optional)',
               style: TextStyle(
@@ -124,6 +145,49 @@ class _RatingSubmissionDialogState extends ConsumerState<RatingSubmissionDialog>
               : Text(isEditing ? 'Update' : 'Submit'),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickRatingChip(String label, double rating, Color color) {
+    final isSelected = _rating == rating;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _rating = rating;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.2) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.star,
+              size: 16,
+              color: isSelected ? color : Colors.grey.shade500,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? color : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

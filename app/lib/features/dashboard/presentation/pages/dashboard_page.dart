@@ -9,6 +9,7 @@ import '../widgets/rating_overview_card.dart';
 import '../widgets/collection_stats_card.dart';
 import '../widgets/activity_card.dart';
 import '../widgets/quick_actions_section.dart';
+import '../../../tasting/presentation/providers/tasting_providers.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -57,7 +58,7 @@ class DashboardPage extends ConsumerWidget {
               
               // Quick Stats Overview
               userStatsAsync.when(
-                data: (stats) => _buildQuickStatsGrid(context, stats),
+                data: (stats) => _buildQuickStatsGrid(context, ref, stats),
                 loading: () => _buildLoadingStatsGrid(),
                 error: (error, stack) => _buildErrorWidget('Failed to load statistics'),
               ),
@@ -225,7 +226,7 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStatsGrid(BuildContext context, UserStatistics stats) {
+  Widget _buildQuickStatsGrid(BuildContext context, WidgetRef ref, UserStatistics stats) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -248,7 +249,7 @@ class DashboardPage extends ConsumerWidget {
           subtitle: stats.hasRatings ? stats.ratingQualityDescription : 'No ratings',
           icon: Icons.trending_up,
           color: Colors.blue,
-          onTap: () => context.go('/drinks'),
+          onTap: () => _navigateWithRatingFilter(context, ref),
         ),
         StatisticCard(
           title: 'Countries',
@@ -256,7 +257,7 @@ class DashboardPage extends ConsumerWidget {
           subtitle: stats.uniqueCountries > 5 ? 'World traveler!' : 'Explore more!',
           icon: Icons.public,
           color: Colors.green,
-          onTap: () => context.go('/drinks'),
+          onTap: () => _navigateWithCountryFilter(context, ref, stats),
         ),
         StatisticCard(
           title: 'This Month',
@@ -264,7 +265,7 @@ class DashboardPage extends ConsumerWidget {
           subtitle: stats.activityLevelDescription,
           icon: Icons.timeline,
           color: Colors.purple,
-          onTap: () => context.go('/drinks'),
+          onTap: () => _navigateWithActivityFilter(context, ref),
         ),
       ],
     );
@@ -396,5 +397,39 @@ class DashboardPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // Smart navigation helper methods
+  void _navigateWithRatingFilter(BuildContext context, WidgetRef ref) {
+    // Set filter to show only rated drinks
+    ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+    context.go('/drinks');
+  }
+
+  void _navigateWithCountryFilter(BuildContext context, WidgetRef ref, UserStatistics stats) {
+    // Set filter to favorite country if available
+    if (stats.favoriteCountry != null) {
+      ref.read(drinksFilterProvider.notifier).setCountryFilter(stats.favoriteCountry!);
+    } else {
+      ref.read(drinksFilterProvider.notifier).resetFilter();
+    }
+    context.go('/drinks');
+  }
+
+  void _navigateWithActivityFilter(BuildContext context, WidgetRef ref) {
+    // Set filter to show recent activity (last 30 days)
+    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+    ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+    context.go('/drinks');
+  }
+
+  void _navigateWithTypeFilter(BuildContext context, WidgetRef ref, UserStatistics stats) {
+    // Set filter to favorite type if available
+    if (stats.favoriteType != null) {
+      ref.read(drinksFilterProvider.notifier).setTypeFilter(stats.favoriteType!);
+    } else {
+      ref.read(drinksFilterProvider.notifier).resetFilter();
+    }
+    context.go('/drinks');
   }
 }

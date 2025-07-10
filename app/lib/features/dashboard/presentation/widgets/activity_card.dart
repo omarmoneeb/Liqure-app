@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../tasting/domain/entities/rating.dart';
+import '../../../tasting/presentation/providers/tasting_providers.dart';
 import '../../domain/entities/user_statistics.dart';
 
-class ActivityCard extends StatelessWidget {
+class ActivityCard extends ConsumerWidget {
   final UserStatistics statistics;
   final List<Rating> recentActivity;
   final bool isLoading;
@@ -15,7 +18,7 @@ class ActivityCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -121,7 +124,8 @@ class ActivityCard extends StatelessWidget {
                         Icons.date_range,
                         Colors.green,
                         () {
-                          // Navigate to recent activity
+                          ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+                          context.go('/drinks');
                         },
                       ),
                       const SizedBox(height: 8),
@@ -131,7 +135,8 @@ class ActivityCard extends StatelessWidget {
                         Icons.calendar_today,
                         Colors.blue,
                         () {
-                          // Navigate to monthly activity
+                          ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+                          context.go('/drinks');
                         },
                       ),
                       const SizedBox(height: 8),
@@ -141,7 +146,8 @@ class ActivityCard extends StatelessWidget {
                         Icons.local_fire_department,
                         Colors.orange,
                         () {
-                          // Navigate to activity trends
+                          ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
+                          context.go('/drinks');
                         },
                       ),
                     ],

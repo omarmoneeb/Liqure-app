@@ -30,6 +30,18 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
   void initState() {
     super.initState();
     _loadAvailableCountries();
+    
+    // Check for shared filter state after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final sharedFilter = ref.read(drinksFilterProvider);
+      if (sharedFilter != const DrinksFilter()) {
+        setState(() {
+          _currentFilter = sharedFilter;
+        });
+        // Reset the shared filter after applying it
+        ref.read(drinksFilterProvider.notifier).resetFilter();
+      }
+    });
   }
 
   @override

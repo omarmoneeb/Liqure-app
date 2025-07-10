@@ -3,6 +3,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../tasting/presentation/providers/tasting_providers.dart';
 import '../../../tasting/domain/entities/drink.dart';
 import '../../../tasting/domain/entities/rating.dart';
+import '../../../tasting/domain/repositories/drinks_repository.dart';
 import '../../domain/entities/user_statistics.dart';
 
 /// Provider for comprehensive user statistics
@@ -106,15 +107,33 @@ Future<Map<String, dynamic>> _calculateDrinkStatistics(
   final countryBreakdown = <String, int>{};
   final abvValues = <double>[];
   
-  // We'll need to fetch drink details for each rating
-  // This is a simplified approach - in production, you might want to optimize this
+  // Get drinks repository to fetch drink details
+  final drinksRepository = ref.watch(drinksRepositoryProvider);
+  
+  // Fetch drink details for each rating
   for (final rating in userRatings) {
     try {
-      // Note: This would require fetching drink details
-      // For now, we'll use mock data structure
-      // In real implementation, you'd fetch drink details here
+      if (rating.drinkId != null) {
+        final drink = await drinksRepository.getDrinkById(rating.drinkId!);
+        
+        if (drink != null) {
+          // Count drink types
+          typeBreakdown[drink.type] = (typeBreakdown[drink.type] ?? 0) + 1;
+          
+          // Count countries
+          if (drink.country != null && drink.country!.isNotEmpty) {
+            countryBreakdown[drink.country!] = (countryBreakdown[drink.country!] ?? 0) + 1;
+          }
+          
+          // Collect ABV values
+          if (drink.abv != null && drink.abv! > 0) {
+            abvValues.add(drink.abv!);
+          }
+        }
+      }
     } catch (e) {
       print('Error fetching drink details for rating ${rating.id}: $e');
+      // Continue processing other ratings even if one fails
     }
   }
   
