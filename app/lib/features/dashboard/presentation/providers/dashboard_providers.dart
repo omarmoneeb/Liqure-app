@@ -6,12 +6,66 @@ import '../../../tasting/domain/entities/rating.dart';
 import '../../../tasting/domain/repositories/drinks_repository.dart';
 import '../../domain/entities/user_statistics.dart';
 
-/// Provider for comprehensive user statistics
+/// Cache duration for dashboard statistics
+const _dashboardCacheDuration = Duration(minutes: 5);
+
+/// In-memory cache for dashboard statistics
+class _DashboardCache {
+  static final Map<String, _CacheEntry<UserStatistics>> _statsCache = {};
+  
+  static UserStatistics? getCachedStats(String userId) {
+    final entry = _statsCache[userId];
+    if (entry != null && !entry.isExpired) {
+      print('📦 Dashboard: Returning cached statistics for user: $userId');
+      return entry.value;
+    }
+    return null;
+  }
+  
+  static void setCachedStats(String userId, UserStatistics stats) {
+    _statsCache[userId] = _CacheEntry(stats, DateTime.now().add(_dashboardCacheDuration));
+    print('📦 Dashboard: Cached statistics for user: $userId (expires in ${_dashboardCacheDuration.inMinutes}min)');
+  }
+  
+  static void invalidateUser(String userId) {
+    _statsCache.remove(userId);
+    print('🗑️ Dashboard: Cache invalidated for user: $userId');
+  }
+  
+  static void clearAll() {
+    _statsCache.clear();
+    print('🗑️ Dashboard: All cache cleared');
+  }
+}
+
+class _CacheEntry<T> {
+  final T value;
+  final DateTime expiry;
+  
+  _CacheEntry(this.value, this.expiry);
+  
+  bool get isExpired => DateTime.now().isAfter(expiry);
+}
+
+/// Provider for comprehensive user statistics with caching
 final userStatisticsProvider = FutureProvider.autoDispose<UserStatistics>((ref) async {
+  print('📊 Dashboard: userStatisticsProvider called');
+  
   final authState = ref.watch(authProvider);
   if (authState.user == null) {
+    print('❌ Dashboard: No authenticated user');
     return const UserStatistics();
   }
+
+  final userId = authState.user!.id;
+  
+  // Check cache first
+  final cachedStats = _DashboardCache.getCachedStats(userId);
+  if (cachedStats != null) {
+    return cachedStats;
+  }
+
+  print('📊 Dashboard: Cache miss, calculating fresh statistics for user: $userId');
 
   // Get user ratings and basic stats
   final userRatings = await ref.watch(userRatingsProvider.future);
@@ -28,7 +82,7 @@ final userStatisticsProvider = FutureProvider.autoDispose<UserStatistics>((ref) 
     ratingDistribution[ratingValue] = (ratingDistribution[ratingValue] ?? 0) + 1;
   }
 
-  // Get drinks for each rating to analyze collection
+  // Get drinks for each rating to analyze collection (using optimized batch fetching)
   final drinkStats = await _calculateDrinkStatistics(ref, userRatings);
   
   // Calculate activity statistics
@@ -37,7 +91,7 @@ final userStatisticsProvider = FutureProvider.autoDispose<UserStatistics>((ref) 
   // Calculate achievements
   final achievements = _calculateAchievements(userRatings, drinkStats);
 
-  return UserStatistics(
+  final statistics = UserStatistics(
     // Rating Statistics
     totalRatings: userRatings.length,
     averageRating: basicStats['averageRating']?.toDouble() ?? 0.0,
@@ -66,6 +120,12 @@ final userStatisticsProvider = FutureProvider.autoDispose<UserStatistics>((ref) 
     achievements: achievements,
     totalAchievements: achievements.length,
   );
+
+  // Cache the computed statistics
+  _DashboardCache.setCachedStats(userId, statistics);
+  
+  print('📊 Dashboard: Statistics calculated and cached successfully');
+  return statistics;
 });
 
 /// Provider for recent user activity
@@ -102,10 +162,20 @@ final userFavoriteTypesProvider = FutureProvider.autoDispose<List<MapEntry<Drink
 final dashboardRefreshProvider = Provider<void Function()>((ref) {
   return () {
     print('🔄 Dashboard: Refreshing all dashboard data');
+    
+    // Get current user to invalidate their cache
+    final authState = ref.read(authProvider);
+    if (authState.user != null) {
+      _DashboardCache.invalidateUser(authState.user!.id);
+    }
+    
+    // Invalidate all related providers
     ref.invalidate(userStatisticsProvider);
     ref.invalidate(userRecentActivityProvider);
     ref.invalidate(userFavoriteTypesProvider);
-    print('🔄 Dashboard: All providers invalidated');
+    ref.invalidate(optimizedUserStatisticsProvider);
+    
+    print('🔄 Dashboard: All providers invalidated and cache cleared');
   };
 });
 
