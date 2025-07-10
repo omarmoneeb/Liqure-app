@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/drink.dart';
 import '../providers/tasting_providers.dart';
+import '../widgets/enhanced_search_bar.dart';
+import '../widgets/abv_range_slider.dart';
+import '../widgets/country_filter.dart';
+import '../widgets/sort_selector.dart';
+import '../widgets/filter_chips.dart';
+import '../widgets/rating_filter.dart';
 
 class DrinksPage extends ConsumerStatefulWidget {
   const DrinksPage({super.key});
@@ -12,69 +18,48 @@ class DrinksPage extends ConsumerStatefulWidget {
 }
 
 class _DrinksPageState extends ConsumerState<DrinksPage> {
-  final TextEditingController _searchController = TextEditingController();
-  DrinkType? _selectedType;
-  String _searchQuery = '';
-  
-  // Memoized filter to prevent unnecessary rebuilds
-  DrinksFilter? _cachedFilter;
-  String? _lastSearchQuery;
-  DrinkType? _lastSelectedType;
+  // Enhanced filter state
+  DrinksFilter _currentFilter = const DrinksFilter();
+  bool _showAdvancedFilters = false;
+  final ScrollController _scrollController = ScrollController();
+
+  // Available countries (will be populated from data)
+  List<String> _availableCountries = [];
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    });
+    _loadAvailableCountries();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
-  
-  DrinksFilter _getFilter() {
-    // Check if we need to create a new filter
-    if (_cachedFilter == null || 
-        _lastSearchQuery != _searchQuery || 
-        _lastSelectedType != _selectedType) {
-      
-      print('🎨 DrinksPage: Creating new filter (search: "$_searchQuery", type: $_selectedType)');
-      
-      _cachedFilter = DrinksFilter(
-        search: _searchQuery.isEmpty ? null : _searchQuery,
-        type: _selectedType,
-      );
-      _lastSearchQuery = _searchQuery;
-      _lastSelectedType = _selectedType;
-    } else {
-      print('🎨 DrinksPage: Reusing cached filter');
-    }
-    
-    return _cachedFilter ?? const DrinksFilter();
+
+  void _loadAvailableCountries() {
+    // For now, use a predefined list. In production, this could be loaded from the backend
+    _availableCountries = [
+      'Scotland', 'Ireland', 'USA', 'Japan', 'France', 'Mexico', 
+      'Russia', 'England', 'Canada', 'Germany', 'Italy', 'Spain',
+      'Australia', 'India', 'Brazil', 'Argentina', 'Chile'
+    ];
+  }
+
+  void _updateFilter(DrinksFilter newFilter) {
+    setState(() {
+      _currentFilter = newFilter;
+    });
+    print('🎨 Enhanced DrinksPage: Filter updated - activeFilters=${newFilter.activeFilterCount}');
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🎨 DrinksPage: Building with searchQuery="$_searchQuery", selectedType=$_selectedType');
+    print('🎨 Enhanced DrinksPage: Building with filter: ${_currentFilter.activeFilterCount} active filters');
     
-    final filter = _getFilter();
-    print('🎨 DrinksPage: Using filter: search=${filter.search}, type=${filter.type}');
+    final drinksAsync = ref.watch(drinksProvider(_currentFilter));
     
-    final drinksAsync = ref.watch(drinksProvider(filter));
-    
-    print('🎨 DrinksPage: Got drinksAsync state: ${drinksAsync.runtimeType}');
-    
-    drinksAsync.when(
-      data: (drinks) => print('🎨 DrinksPage: Data state with ${drinks.length} drinks'),
-      loading: () => print('🎨 DrinksPage: Loading state'),
-      error: (error, stack) => print('🎨 DrinksPage: Error state: $error'),
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Drinks'),
@@ -85,10 +70,23 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
           onPressed: () => context.go('/home'),
         ),
         actions: [
+          // Advanced filter toggle
+          IconButton(
+            icon: Icon(
+              _showAdvancedFilters ? Icons.filter_list : Icons.filter_list_outlined,
+              color: _showAdvancedFilters ? Colors.white : null,
+            ),
+            onPressed: () {
+              setState(() {
+                _showAdvancedFilters = !_showAdvancedFilters;
+              });
+            },
+            tooltip: 'Advanced Filters',
+          ),
+          // Add drink button
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              // TODO: Navigate to add drink page
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Add drink feature coming soon!')),
               );
@@ -98,91 +96,209 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
       ),
       body: Column(
         children: [
-          // Search and Filter Section
+          // Enhanced Search Section (Fixed at top)
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.amber.shade50,
             child: Column(
               children: [
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search drinks...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
+                // Enhanced Search Bar
+                EnhancedSearchBar(
+                  searchQuery: _currentFilter.search,
+                  searchFields: _currentFilter.searchFields,
+                  onSearchChanged: (search) {
+                    _updateFilter(_currentFilter.copyWith(search: search));
                   },
+                  onSearchFieldsChanged: (fields) {
+                    _updateFilter(_currentFilter.copyWith(searchFields: fields));
+                  },
+                  searchSuggestions: _getSearchSuggestions(),
                 ),
+                
                 const SizedBox(height: 12),
-                // Type Filter
+                
+                // Quick type filter chips (always visible)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildTypeChip('All', null),
+                      _buildQuickTypeChip('All', null),
                       const SizedBox(width: 8),
-                      ...DrinkType.values.map((type) => Padding(
+                      ...DrinkType.values.take(6).map((type) => Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: _buildTypeChip(_getTypeDisplayName(type), type),
+                        child: _buildQuickTypeChip(_getTypeDisplayName(type), type),
                       )),
+                      if (!_showAdvancedFilters)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _showAdvancedFilters = true;
+                              });
+                            },
+                            icon: const Icon(Icons.tune, size: 16),
+                            label: const Text('More Filters'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.amber.shade700,
+                              side: BorderSide(color: Colors.amber.shade300),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          // Drinks List
+          
+          // Scrollable content area
           Expanded(
-            child: drinksAsync.when(
-              data: (drinks) {
-                if (drinks.isEmpty) {
-                  return _buildEmptyState();
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: drinks.length,
-                  itemBuilder: (context, index) {
-                    final drink = drinks[index];
-                    return _buildDrinkCard(drink);
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text('Error loading drinks: $error'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => ref.refresh(drinksProvider(filter)),
-                      child: const Text('Retry'),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Active Filters Display
+                  if (_currentFilter.hasActiveFilters)
+                    FilterChipsDisplay(
+                      filter: _currentFilter,
+                      onFilterChanged: _updateFilter,
                     ),
-                  ],
-                ),
+                  
+                  // Advanced Filters Panel
+                  if (_showAdvancedFilters)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.grey.shade50,
+                      child: Column(
+                        children: [
+                          // ABV Range Filter
+                          ABVRangeSlider(
+                            minValue: _currentFilter.minAbv,
+                            maxValue: _currentFilter.maxAbv,
+                            onChanged: (min, max) {
+                              _updateFilter(_currentFilter.copyWith(
+                                minAbv: min,
+                                maxAbv: max,
+                              ));
+                            },
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Country Filter
+                          CountryFilter(
+                            selectedCountries: _currentFilter.countries,
+                            availableCountries: _availableCountries,
+                            onChanged: (countries) {
+                              _updateFilter(_currentFilter.copyWith(countries: countries));
+                            },
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Rating Filter
+                          RatingFilter(
+                            minRating: _currentFilter.minRating,
+                            maxRating: _currentFilter.maxRating,
+                            onlyRated: _currentFilter.onlyRated,
+                            onlyUnrated: _currentFilter.onlyUnrated,
+                            onChanged: (minRating, maxRating, onlyRated, onlyUnrated) {
+                              _updateFilter(_currentFilter.copyWith(
+                                minRating: minRating,
+                                maxRating: maxRating,
+                                onlyRated: onlyRated,
+                                onlyUnrated: onlyUnrated,
+                              ));
+                            },
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Sort Selector
+                          SortSelector(
+                            sortBy: _currentFilter.sortBy,
+                            sortDirection: _currentFilter.sortDirection,
+                            onChanged: (sortBy, direction) {
+                              _updateFilter(_currentFilter.copyWith(
+                                sortBy: sortBy,
+                                sortDirection: direction,
+                              ));
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Results Summary
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: drinksAsync.when(
+                      data: (drinks) => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${drinks.length} drink${drinks.length != 1 ? 's' : ''} found',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          // Remove duplicate Clear All button - it's already in FilterChipsDisplay
+                        ],
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  
+                  // Drinks List Container
+                  Container(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height * 0.4,
+                    ),
+                    child: drinksAsync.when(
+                      data: (drinks) {
+                        if (drinks.isEmpty) {
+                          return _buildEmptyState();
+                        }
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: drinks.length,
+                          itemBuilder: (context, index) {
+                            final drink = drinks[index];
+                            return _buildDrinkCard(drink);
+                          },
+                        );
+                      },
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (error, stack) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                              const SizedBox(height: 16),
+                              Text('Error loading drinks: $error'),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => ref.refresh(drinksProvider(_currentFilter)),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -191,15 +307,22 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
     );
   }
 
-  Widget _buildTypeChip(String label, DrinkType? type) {
-    final isSelected = _selectedType == type;
+  // Helper methods for the enhanced UI
+  List<String> _getSearchSuggestions() {
+    // In production, this could be based on popular searches or existing drink names
+    return [
+      'Whiskey', 'Single Malt', 'Bourbon', 'Scotch', 'Japanese',
+      'Highland', 'Speyside', 'Islay', 'Sherry Cask', 'Peated'
+    ];
+  }
+
+  Widget _buildQuickTypeChip(String label, DrinkType? type) {
+    final isSelected = _currentFilter.type == type;
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
-        setState(() {
-          _selectedType = selected ? type : null;
-        });
+        _updateFilter(_currentFilter.copyWith(type: selected ? type : null));
       },
       backgroundColor: Colors.white,
       selectedColor: Colors.amber.shade200,
@@ -348,8 +471,8 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty || _selectedType != null
-                ? 'Try adjusting your search or filter'
+            _currentFilter.hasActiveFilters
+                ? 'Try adjusting your filters or search terms'
                 : 'Seed the database to get started',
             style: TextStyle(
               fontSize: 14,

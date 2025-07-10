@@ -12,6 +12,26 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 part 'tasting_providers.freezed.dart';
 part 'tasting_providers.g.dart';
 
+// Enums for enhanced filtering
+enum SortBy {
+  name,
+  abv,
+  rating,
+  created,
+  country,
+}
+
+enum SortDirection {
+  ascending,
+  descending,
+}
+
+enum SearchField {
+  name,
+  description,
+  country,
+}
+
 // Repository providers
 final drinksRepositoryProvider = Provider<DrinksRepository>((ref) {
   final pocketBaseClient = ref.watch(pocketBaseClientProvider);
@@ -23,16 +43,133 @@ final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
   return RatingsRepositoryImpl(pocketBaseClient);
 });
 
-// Drinks providers
+// Enhanced drinks provider with rating support
 final drinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilter?>((ref, filter) async {
-  print('🎯 DrinksProvider: Starting with filter: $filter');
-  print('🎯 DrinksProvider: search=${filter?.search}, type=${filter?.type}');
+  final actualFilter = filter ?? const DrinksFilter();
+  print('🎯 Enhanced DrinksProvider: Starting with filter: $actualFilter');
+  print('🎯 Enhanced DrinksProvider: activeFilters=${actualFilter.activeFilterCount}');
   
   // Keep alive for 60 seconds to prevent unnecessary recreations
   ref.keepAlive();
   
+  final drinksRepository = ref.watch(drinksRepositoryProvider);
+  final ratingsRepository = ref.watch(ratingsRepositoryProvider);
+  
+  print('🎯 Enhanced DrinksProvider: Got repositories, calling enhanced getDrinksWithFilter...');
+  
+  try {
+    // Get drinks from repository (without rating filters applied at DB level)
+    final drinks = await drinksRepository.getDrinksWithFilter(actualFilter);
+    print('🎯 Enhanced DrinksProvider: Got ${drinks.length} drinks from repository');
+    
+    // Apply client-side rating filtering if rating filters are active
+    if (_hasRatingFilters(actualFilter)) {
+      print('🎯 Enhanced DrinksProvider: Applying client-side rating filters...');
+      
+      // Get all ratings for these drinks
+      final drinkIds = drinks.map((d) => d.id).toList();
+      final ratingsMap = await _getDrinkRatingsMap(ratingsRepository, drinkIds);
+      
+      // Filter drinks based on rating criteria
+      final filteredDrinks = _applyRatingFilters(drinks, ratingsMap, actualFilter);
+      
+      print('🎯 Enhanced DrinksProvider: After rating filtering: ${filteredDrinks.length} drinks');
+      return filteredDrinks;
+    }
+    
+    print('🎯 Enhanced DrinksProvider: No rating filters, returning ${drinks.length} drinks');
+    return drinks;
+  } catch (e, stackTrace) {
+    print('❌ Enhanced DrinksProvider: Error getting drinks: $e');
+    print('❌ Enhanced DrinksProvider: Stack trace: $stackTrace');
+    rethrow;
+  }
+});
+
+// Helper function to check if rating filters are active
+bool _hasRatingFilters(DrinksFilter filter) {
+  return filter.minRating != null || 
+         filter.maxRating != null || 
+         filter.onlyRated == true || 
+         filter.onlyUnrated == true;
+}
+
+// Helper function to get ratings for drinks
+Future<Map<String, List<Rating>>> _getDrinkRatingsMap(
+  RatingsRepository ratingsRepository, 
+  List<String> drinkIds
+) async {
+  final ratingsMap = <String, List<Rating>>{};
+  
+  // Get ratings for all drinks in batches to avoid too many API calls
+  for (final drinkId in drinkIds) {
+    try {
+      final ratings = await ratingsRepository.getDrinkRatings(drinkId);
+      ratingsMap[drinkId] = ratings;
+    } catch (e) {
+      print('⚠️ Failed to get ratings for drink $drinkId: $e');
+      ratingsMap[drinkId] = [];
+    }
+  }
+  
+  return ratingsMap;
+}
+
+// Helper function to apply rating filters client-side
+List<Drink> _applyRatingFilters(
+  List<Drink> drinks, 
+  Map<String, List<Rating>> ratingsMap, 
+  DrinksFilter filter
+) {
+  return drinks.where((drink) {
+    final ratings = ratingsMap[drink.id] ?? [];
+    final hasRatings = ratings.isNotEmpty;
+    
+    // Calculate average rating if ratings exist
+    double? averageRating;
+    if (hasRatings) {
+      final totalRating = ratings.fold<double>(0, (sum, rating) => sum + rating.rating);
+      averageRating = totalRating / ratings.length;
+    }
+    
+    // Apply onlyRated filter
+    if (filter.onlyRated == true && !hasRatings) {
+      return false;
+    }
+    
+    // Apply onlyUnrated filter
+    if (filter.onlyUnrated == true && hasRatings) {
+      return false;
+    }
+    
+    // Apply rating range filters
+    if (filter.minRating != null || filter.maxRating != null) {
+      // If drink has no ratings, exclude it from rating range filters
+      if (!hasRatings) {
+        return false;
+      }
+      
+      if (filter.minRating != null && averageRating! < filter.minRating!) {
+        return false;
+      }
+      
+      if (filter.maxRating != null && averageRating! > filter.maxRating!) {
+        return false;
+      }
+    }
+    
+    return true;
+  }).toList();
+}
+
+// Legacy drinks provider for backward compatibility
+final legacyDrinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilter?>((ref, filter) async {
+  print('🎯 Legacy DrinksProvider: Starting with filter: $filter');
+  print('🎯 Legacy DrinksProvider: search=${filter?.search}, type=${filter?.type}');
+  
+  ref.keepAlive();
+  
   final repository = ref.watch(drinksRepositoryProvider);
-  print('🎯 DrinksProvider: Got repository, calling getDrinks...');
   
   try {
     final drinks = await repository.getDrinks(
@@ -42,11 +179,10 @@ final drinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilt
       perPage: filter?.perPage ?? 50,
     );
     
-    print('🎯 DrinksProvider: Successfully got ${drinks.length} drinks from repository');
+    print('🎯 Legacy DrinksProvider: Successfully got ${drinks.length} drinks from repository');
     return drinks;
   } catch (e, stackTrace) {
-    print('❌ DrinksProvider: Error getting drinks: $e');
-    print('❌ DrinksProvider: Stack trace: $stackTrace');
+    print('❌ Legacy DrinksProvider: Error getting drinks: $e');
     rethrow;
   }
 });
@@ -117,17 +253,74 @@ final userRatingStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>
   return repository.getUserRatingStats(authState.user!.id);
 });
 
-// Filter class for drinks
+// Enhanced filter class for drinks
 @freezed
 class DrinksFilter with _$DrinksFilter {
   const factory DrinksFilter({
+    // Text search
     String? search,
+    @Default([SearchField.name]) List<SearchField> searchFields,
+    
+    // Basic filters  
     DrinkType? type,
+    List<DrinkType>? types, // Multi-select
+    
+    // Range filters
+    double? minAbv,
+    double? maxAbv,
+    
+    // Location filters
+    String? country,
+    List<String>? countries,
+    
+    // Rating filters
+    double? minRating,
+    double? maxRating,
+    bool? onlyRated,
+    bool? onlyUnrated,
+    
+    // Sorting
+    @Default(SortBy.created) SortBy sortBy,
+    @Default(SortDirection.descending) SortDirection sortDirection,
+    
+    // Pagination
     @Default(1) int page,
     @Default(50) int perPage,
   }) = _DrinksFilter;
   
   factory DrinksFilter.fromJson(Map<String, dynamic> json) => _$DrinksFilterFromJson(json);
+  
+  const DrinksFilter._();
+  
+  // Helper methods for filter state
+  bool get hasActiveFilters {
+    return search != null && search!.isNotEmpty ||
+           type != null ||
+           (types != null && types!.isNotEmpty) ||
+           minAbv != null ||
+           maxAbv != null ||
+           country != null ||
+           (countries != null && countries!.isNotEmpty) ||
+           minRating != null ||
+           maxRating != null ||
+           onlyRated == true ||
+           onlyUnrated == true;
+  }
+  
+  int get activeFilterCount {
+    int count = 0;
+    if (search != null && search!.isNotEmpty) count++;
+    if (type != null || (types != null && types!.isNotEmpty)) count++;
+    if (minAbv != null || maxAbv != null) count++;
+    if (country != null || (countries != null && countries!.isNotEmpty)) count++;
+    if (minRating != null || maxRating != null) count++;
+    if (onlyRated == true || onlyUnrated == true) count++;
+    return count;
+  }
+  
+  DrinksFilter clearAllFilters() {
+    return const DrinksFilter();
+  }
 }
 
 // State notifiers for creating/updating entities
