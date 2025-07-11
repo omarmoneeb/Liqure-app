@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/database/seed_runner.dart';
 import '../../core/database/seed_data.dart';
 import '../../core/network/pocketbase_client.dart';
+import '../onboarding/presentation/providers/age_verification_provider.dart';
 
 class DebugPage extends ConsumerStatefulWidget {
   const DebugPage({super.key});
@@ -88,6 +89,8 @@ class _DebugPageState extends ConsumerState<DebugPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isAgeVerified = ref.watch(ageVerificationProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Debug Tools'),
@@ -102,6 +105,63 @@ class _DebugPageState extends ConsumerState<DebugPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Age Verification Debug Section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Age Verification Debug',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Current Status: ${isAgeVerified ? "✅ Verified" : "❌ Not Verified"}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isAgeVerified ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await ref.read(ageVerificationProvider.notifier).clearAgeVerification();
+                              if (context.mounted) {
+                                context.go('/age-gate');
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Reset Age Gate'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await ref.read(ageVerificationProvider.notifier).setAgeVerified(true);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Force Verify'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),

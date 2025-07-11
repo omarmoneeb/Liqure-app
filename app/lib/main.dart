@@ -8,6 +8,8 @@ import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/debug/debug_page.dart';
 import 'features/tasting/presentation/pages/drinks_page.dart';
 import 'features/tasting/presentation/pages/drink_detail_page.dart';
+import 'features/onboarding/presentation/pages/age_gate_page.dart';
+import 'features/onboarding/presentation/providers/age_verification_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +41,7 @@ class LiquorJournalApp extends ConsumerWidget {
       initialLocation: '/splash',
       redirect: (context, state) {
         final authState = ref.read(authProvider);
+        final isAgeVerified = ref.read(ageVerificationProvider);
         final isAuthenticated = authState.isAuthenticated;
         final isLoading = authState.isLoading;
 
@@ -47,9 +50,14 @@ class LiquorJournalApp extends ConsumerWidget {
           return null;
         }
 
-        // If not authenticated and trying to access protected routes
-        if (!isAuthenticated && !_isPublicRoute(state.fullPath)) {
-          return '/sign-in';
+        // CRITICAL: Check age verification first (required for app store compliance)
+        if (!isAgeVerified && state.fullPath != '/age-gate') {
+          return '/age-gate';
+        }
+
+        // If age verified but not authenticated and trying to access protected routes
+        if (isAgeVerified && !isAuthenticated && !_isPublicRoute(state.fullPath)) {
+          return '/auth/signin';
         }
 
         // If authenticated and trying to access auth routes
@@ -64,6 +72,24 @@ class LiquorJournalApp extends ConsumerWidget {
           path: '/splash',
           builder: (context, state) => const SplashPage(),
         ),
+        GoRoute(
+          path: '/age-gate',
+          builder: (context, state) => const AgeGatePage(),
+        ),
+        GoRoute(
+          path: '/auth',
+          routes: [
+            GoRoute(
+              path: 'signin',
+              builder: (context, state) => const SignInPage(),
+            ),
+            GoRoute(
+              path: 'signup',
+              builder: (context, state) => const SignUpPage(),
+            ),
+          ],
+        ),
+        // Legacy routes for backwards compatibility
         GoRoute(
           path: '/sign-in',
           builder: (context, state) => const SignInPage(),
@@ -98,12 +124,12 @@ class LiquorJournalApp extends ConsumerWidget {
   }
 
   bool _isPublicRoute(String? path) {
-    const publicRoutes = ['/splash', '/sign-in', '/sign-up'];
+    const publicRoutes = ['/splash', '/age-gate', '/sign-in', '/sign-up', '/auth/signin', '/auth/signup'];
     return publicRoutes.contains(path);
   }
 
   bool _isAuthRoute(String? path) {
-    const authRoutes = ['/sign-in', '/sign-up'];
+    const authRoutes = ['/sign-in', '/sign-up', '/auth/signin', '/auth/signup'];
     return authRoutes.contains(path);
   }
 }
@@ -114,13 +140,17 @@ class SplashPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Listen to auth state to redirect when ready
+    // Listen to both auth state and age verification to redirect when ready
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (!next.isLoading) {
-        if (next.isAuthenticated) {
+        final isAgeVerified = ref.read(ageVerificationProvider);
+        
+        if (!isAgeVerified) {
+          context.go('/age-gate');
+        } else if (next.isAuthenticated) {
           context.go('/home');
         } else {
-          context.go('/sign-in');
+          context.go('/auth/signin');
         }
       }
     });
