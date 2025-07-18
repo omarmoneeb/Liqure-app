@@ -10,6 +10,9 @@ import '../widgets/collection_stats_card.dart';
 import '../widgets/activity_card.dart';
 import '../widgets/quick_actions_section.dart';
 import '../../../tasting/presentation/providers/tasting_providers.dart';
+import '../../../inventory/presentation/providers/cabinet_providers.dart';
+import '../../../inventory/presentation/widgets/cabinet_stats_overview.dart';
+import '../../../inventory/presentation/widgets/cabinet_quick_actions.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -44,6 +47,10 @@ class DashboardPage extends ConsumerWidget {
           // Refresh all dashboard data
           ref.invalidate(userStatisticsProvider);
           ref.invalidate(userRecentActivityProvider);
+          // Refresh cabinet data
+          ref.invalidate(cabinetStatsProvider);
+          ref.invalidate(lowFillLevelItemsProvider);
+          ref.invalidate(recentlyAddedItemsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -89,6 +96,11 @@ class DashboardPage extends ConsumerWidget {
                     ),
                     error: (error, stack) => _buildErrorWidget('Failed to load collection stats'),
                   ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Cabinet Overview Section
+                  _buildCabinetSection(context, ref),
                   
                   const SizedBox(height: 16),
                   
@@ -417,8 +429,7 @@ class DashboardPage extends ConsumerWidget {
   }
 
   void _navigateWithActivityFilter(BuildContext context, WidgetRef ref) {
-    // Set filter to show recent activity (last 30 days)
-    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+    // Set filter to show recent activity 
     ref.read(drinksFilterProvider.notifier).setOnlyRatedFilter();
     context.go('/drinks');
   }
@@ -431,5 +442,137 @@ class DashboardPage extends ConsumerWidget {
       ref.read(drinksFilterProvider.notifier).resetFilter();
     }
     context.go('/drinks');
+  }
+
+  Widget _buildCabinetSection(BuildContext context, WidgetRef ref) {
+    final cabinetStatsAsync = ref.watch(cabinetStatsProvider);
+    
+    return Column(
+      children: [
+        // Cabinet Overview Stats
+        cabinetStatsAsync.when(
+          data: (stats) => CabinetStatsOverview(stats: stats),
+          loading: () => _buildLoadingCabinetOverview(),
+          error: (error, stack) => _buildErrorWidget('Failed to load cabinet data'),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Cabinet Quick Actions
+        const CabinetQuickActions(),
+        
+        const SizedBox(height: 8),
+        
+        // View Full Cabinet Button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go('/cabinet'),
+              icon: const Icon(Icons.inventory),
+              label: const Text('View Full Cabinet'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingCabinetOverview() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.bar_chart, color: Colors.amber, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'Cabinet Overview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Loading placeholders
+              Row(
+                children: [
+                  Expanded(child: _buildLoadingStatPlaceholder()),
+                  Expanded(child: _buildLoadingStatPlaceholder()),
+                  Expanded(child: _buildLoadingStatPlaceholder()),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Expanded(child: _buildLoadingStatPlaceholder()),
+                  Expanded(child: _buildLoadingStatPlaceholder()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingStatPlaceholder() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.hourglass_empty,
+            color: Colors.grey,
+            size: 24,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 16,
+          width: 40,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 12,
+          width: 60,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ],
+    );
   }
 }

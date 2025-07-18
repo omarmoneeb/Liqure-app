@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +11,35 @@ import 'features/tasting/presentation/pages/drinks_page.dart';
 import 'features/tasting/presentation/pages/drink_detail_page.dart';
 import 'features/onboarding/presentation/pages/age_gate_page.dart';
 import 'features/onboarding/presentation/providers/age_verification_provider.dart';
+import 'features/scan/presentation/pages/barcode_scanner_page.dart';
+import 'features/inventory/presentation/pages/cabinet_page.dart';
+import 'core/database/providers/database_providers.dart';
+import 'core/config/app_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: LiquorJournalApp()));
+  
+  // Load environment configuration
+  if (kDebugMode) {
+    debugPrint('🚀 Main: Loading environment configuration...');
+  }
+  await AppConfig.initialize();
+  
+  // Initialize Floor database
+  if (kDebugMode) {
+    debugPrint('🚀 Main: Initializing Floor database...');
+  }
+  final database = await initializeDatabase();
+  
+  // Run app with database override
+  runApp(
+    ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+      ],
+      child: const LiquorJournalApp(),
+    ),
+  );
 }
 
 class LiquorJournalApp extends ConsumerWidget {
@@ -40,6 +66,11 @@ class LiquorJournalApp extends ConsumerWidget {
     return GoRouter(
       initialLocation: '/splash',
       redirect: (context, state) {
+        // Don't redirect during splash screen
+        if (state.fullPath == '/splash') {
+          return null;
+        }
+        
         final authState = ref.read(authProvider);
         final isAgeVerified = ref.read(ageVerificationProvider);
         final isAuthenticated = authState.isAuthenticated;
@@ -78,6 +109,7 @@ class LiquorJournalApp extends ConsumerWidget {
         ),
         GoRoute(
           path: '/auth',
+          redirect: (context, state) => '/auth/signin', // Redirect to signin by default
           routes: [
             GoRoute(
               path: 'signin',
@@ -107,8 +139,19 @@ class LiquorJournalApp extends ConsumerWidget {
           builder: (context, state) => const DebugPage(),
         ),
         GoRoute(
+          path: '/scan',
+          builder: (context, state) => const BarcodeScannerPage(),
+        ),
+        GoRoute(
+          path: '/cabinet',
+          builder: (context, state) => const CabinetPage(),
+        ),
+        GoRoute(
           path: '/drinks',
-          builder: (context, state) => const DrinksPage(),
+          builder: (context, state) {
+            final barcodeQuery = state.uri.queryParameters['barcode'];
+            return DrinksPage(barcodeQuery: barcodeQuery);
+          },
           routes: [
             GoRoute(
               path: ':id',

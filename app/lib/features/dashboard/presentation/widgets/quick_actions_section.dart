@@ -49,14 +49,10 @@ class QuickActionsSection extends StatelessWidget {
                 Expanded(
                   child: _buildActionButton(
                     context,
-                    'Add Drink',
-                    Icons.add_circle,
-                    Colors.green,
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Add drink feature coming soon!'),
-                      ),
-                    ),
+                    'My Cabinet',
+                    Icons.inventory_2,
+                    Colors.purple,
+                    () => context.go('/cabinet'),
                   ),
                 ),
               ],
@@ -84,11 +80,7 @@ class QuickActionsSection extends StatelessWidget {
                     'Scan Barcode',
                     Icons.qr_code_scanner,
                     Colors.orange,
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Barcode scanner coming soon!'),
-                      ),
-                    ),
+                    () => context.go('/scan'),
                   ),
                 ),
               ],

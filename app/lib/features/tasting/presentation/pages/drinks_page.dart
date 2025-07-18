@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,7 +12,9 @@ import '../widgets/filter_chips.dart';
 import '../widgets/rating_filter.dart';
 
 class DrinksPage extends ConsumerStatefulWidget {
-  const DrinksPage({super.key});
+  const DrinksPage({super.key, this.barcodeQuery});
+  
+  final String? barcodeQuery;
 
   @override
   ConsumerState<DrinksPage> createState() => _DrinksPageState();
@@ -41,6 +44,36 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
         // Reset the shared filter after applying it
         ref.read(drinksFilterProvider.notifier).resetFilter();
       }
+      
+      // Handle barcode query parameter
+      if (widget.barcodeQuery != null && widget.barcodeQuery!.isNotEmpty) {
+        setState(() {
+          _currentFilter = _currentFilter.copyWith(
+            search: widget.barcodeQuery,
+            searchFields: [SearchField.barcode], // Search specifically by barcode
+          );
+        });
+        
+        // Show a helpful message about barcode search
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Searching for barcode: ${widget.barcodeQuery}'),
+            backgroundColor: Colors.amber,
+            action: SnackBarAction(
+              label: 'Clear',
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() {
+                  _currentFilter = _currentFilter.copyWith(
+                    search: '',
+                    searchFields: [SearchField.name], // Reset to name search
+                  );
+                });
+              },
+            ),
+          ),
+        );
+      }
     });
   }
 
@@ -63,12 +96,16 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
     setState(() {
       _currentFilter = newFilter;
     });
-    print('🎨 Enhanced DrinksPage: Filter updated - activeFilters=${newFilter.activeFilterCount}');
+    if (kDebugMode) {
+      debugPrint('🎨 Enhanced DrinksPage: Filter updated - activeFilters=${newFilter.activeFilterCount}');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🎨 Enhanced DrinksPage: Building with filter: ${_currentFilter.activeFilterCount} active filters');
+    if (kDebugMode) {
+      debugPrint('🎨 Enhanced DrinksPage: Building with filter: ${_currentFilter.activeFilterCount} active filters');
+    }
     
     final drinksAsync = ref.watch(drinksProvider(_currentFilter));
     
@@ -82,6 +119,14 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
           onPressed: () => context.go('/home'),
         ),
         actions: [
+          // Scan barcode button
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: () {
+              context.go('/scan');
+            },
+            tooltip: 'Scan Barcode',
+          ),
           // Advanced filter toggle
           IconButton(
             icon: Icon(
@@ -188,6 +233,7 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
                             minValue: _currentFilter.minAbv,
                             maxValue: _currentFilter.maxAbv,
                             onChanged: (min, max) {
+                              print('🍺 DrinksPage: ABV filter changed to min=$min, max=$max');
                               _updateFilter(_currentFilter.copyWith(
                                 minAbv: min,
                                 maxAbv: max,
@@ -354,7 +400,9 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          print('🔍 DrinksPage: Navigating to drink detail with id="${drink.id}", name="${drink.name}"');
+          if (kDebugMode) {
+            debugPrint('🔍 DrinksPage: Navigating to drink detail with id="${drink.id}", name="${drink.name}"');
+          }
           context.go('/drinks/${drink.id}');
         },
         child: Padding(
@@ -557,6 +605,51 @@ class _DrinksPageState extends ConsumerState<DrinksPage> {
               color: Colors.grey.shade500,
             ),
           ),
+          const SizedBox(height: 16),
+          if (_currentFilter.hasActiveFilters) ...[
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _currentFilter = const DrinksFilter();
+                });
+              },
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear All Filters'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    context.go('/scan');
+                  },
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan Barcode'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.go('/debug');
+                  },
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Seed Database'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.amber.shade700,
+                    side: BorderSide(color: Colors.amber.shade300),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

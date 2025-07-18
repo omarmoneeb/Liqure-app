@@ -102,9 +102,10 @@ class _DebugPageState extends ConsumerState<DebugPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Age Verification Debug Section
             Card(
               child: Padding(
@@ -245,19 +246,20 @@ class _DebugPageState extends ConsumerState<DebugPage> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
-                    const Text('• Whiskey (Jameson, Jack Daniel\'s, Macallan, etc.)'),
-                    const Text('• Vodka (Grey Goose, Absolut, Belvedere, etc.)'),
-                    const Text('• Gin (Tanqueray, Hendrick\'s, Bombay Sapphire)'),
-                    const Text('• Rum (Bacardi, Captain Morgan, Mount Gay)'),
-                    const Text('• Tequila (Patrón, Don Julio, Herradura)'),
-                    const Text('• Mezcal (Del Maguey, Montelobos)'),
-                    const Text('• Liqueurs (Grand Marnier, Kahlúa, Baileys)'),
-                    const Text('• Wine & Beer examples'),
+                    const Text('• Whiskey (Jameson, Jack Daniel\'s, Macallan, etc.)', overflow: TextOverflow.ellipsis),
+                    const Text('• Vodka (Grey Goose, Absolut, Belvedere, etc.)', overflow: TextOverflow.ellipsis),
+                    const Text('• Gin (Tanqueray, Hendrick\'s, Bombay Sapphire)', overflow: TextOverflow.ellipsis),
+                    const Text('• Rum (Bacardi, Captain Morgan, Mount Gay)', overflow: TextOverflow.ellipsis),
+                    const Text('• Tequila (Patrón, Don Julio, Herradura)', overflow: TextOverflow.ellipsis),
+                    const Text('• Mezcal (Del Maguey, Montelobos)', overflow: TextOverflow.ellipsis),
+                    const Text('• Liqueurs (Grand Marnier, Kahlúa, Baileys)', overflow: TextOverflow.ellipsis),
+                    const Text('• Wine & Beer examples', overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

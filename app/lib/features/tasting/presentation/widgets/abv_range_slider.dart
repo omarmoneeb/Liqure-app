@@ -86,11 +86,25 @@ class _ABVRangeSliderState extends State<ABVRangeSlider> {
                           _isActive = value;
                         });
                         if (value) {
+                          // When activating the filter, use sensible default range instead of full range
+                          final defaultMin = 20.0;
+                          final defaultMax = 60.0;
+                          
+                          // If current range is at the limits, use defaults
+                          if (_currentRangeValues.start == widget.minLimit && 
+                              _currentRangeValues.end == widget.maxLimit) {
+                            setState(() {
+                              _currentRangeValues = RangeValues(defaultMin, defaultMax);
+                            });
+                          }
+                          
+                          print('🍺 ABV Filter: Activated with range ${_currentRangeValues.start.round()}% - ${_currentRangeValues.end.round()}%');
                           widget.onChanged(
                             _currentRangeValues.start,
                             _currentRangeValues.end,
                           );
                         } else {
+                          print('🍺 ABV Filter: Deactivated');
                           widget.onChanged(null, null);
                         }
                       },
@@ -120,6 +134,7 @@ class _ABVRangeSliderState extends State<ABVRangeSlider> {
                   setState(() {
                     _currentRangeValues = values;
                   });
+                  print('🍺 ABV Filter: Range changed to ${values.start.round()}% - ${values.end.round()}%');
                   widget.onChanged(values.start, values.end);
                 },
               ),
@@ -151,10 +166,10 @@ class _ABVRangeSliderState extends State<ABVRangeSlider> {
               Wrap(
                 spacing: 8,
                 children: [
-                  _buildPresetChip('Low (0-20%)', 0, 20),
-                  _buildPresetChip('Standard (20-40%)', 20, 40),
-                  _buildPresetChip('Strong (40-60%)', 40, 60),
-                  _buildPresetChip('High (60%+)', 60, 100),
+                  _buildPresetChip('Wine (8-15%)', 8, 15),
+                  _buildPresetChip('Beer (3-12%)', 3, 12),
+                  _buildPresetChip('Spirits (35-50%)', 35, 50),
+                  _buildPresetChip('High Proof (50-70%)', 50, 70),
                 ],
               ),
             ],
@@ -181,6 +196,7 @@ class _ABVRangeSliderState extends State<ABVRangeSlider> {
           setState(() {
             _currentRangeValues = RangeValues(min, max);
           });
+          print('🍺 ABV Filter: Preset selected - $label (${min.round()}% - ${max.round()}%)');
           widget.onChanged(min, max);
         }
       },

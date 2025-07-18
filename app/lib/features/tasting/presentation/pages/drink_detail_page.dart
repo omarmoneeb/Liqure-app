@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:uuid/uuid.dart';
 import '../../domain/entities/drink.dart';
 import '../../domain/entities/rating.dart';
 import '../providers/tasting_providers.dart';
 import '../widgets/rating_widget.dart';
 import '../widgets/rating_submission_dialog.dart';
+import '../../../inventory/domain/entities/cabinet_item.dart';
+import '../../../inventory/presentation/providers/cabinet_providers.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class DrinkDetailPage extends ConsumerStatefulWidget {
   final String drinkId;
@@ -17,19 +24,25 @@ class DrinkDetailPage extends ConsumerStatefulWidget {
 }
 
 class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
+  final bool _isAddingToCabinet = false;
+  
   @override
   Widget build(BuildContext context) {
-    print('🔍 DrinkDetailPage: Building with drinkId="${widget.drinkId}"');
+    if (kDebugMode) {
+      debugPrint('🔍 DrinkDetailPage: Building with drinkId="${widget.drinkId}"');
+    }
     
     final drinkAsync = ref.watch(drinkByIdProvider(widget.drinkId));
     final userRatingAsync = ref.watch(userDrinkRatingProvider(widget.drinkId));
     final averageRatingAsync = ref.watch(drinkAverageRatingProvider(widget.drinkId));
     
-    drinkAsync.when(
-      data: (drink) => print('🔍 DrinkDetailPage: Got drink data: ${drink?.id} - ${drink?.name}'),
-      loading: () => print('🔍 DrinkDetailPage: Loading drink...'),
-      error: (error, stack) => print('🔍 DrinkDetailPage: Error loading drink: $error'),
-    );
+    if (kDebugMode) {
+      drinkAsync.when(
+        data: (drink) => debugPrint('🔍 DrinkDetailPage: Got drink data: ${drink?.id} - ${drink?.name}'),
+        loading: () => debugPrint('🔍 DrinkDetailPage: Loading drink...'),
+        error: (error, stack) => debugPrint('🔍 DrinkDetailPage: Error loading drink: $error'),
+      );
+    }
 
     return Scaffold(
       body: drinkAsync.when(
@@ -52,17 +65,48 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
             );
           }
 
+          final cabinetItem = ref.watch(cabinetItemByDrinkProvider(drink.id));
+          // Get similar drinks by filtering drinks of the same type
+          final similarDrinksAsync = ref.watch(drinksProvider(DrinksFilter(types: [drink.type])));
+          
           return CustomScrollView(
             slivers: [
-              // App Bar with image
+              // App Bar with image carousel
               SliverAppBar(
-                expandedHeight: 300,
+                expandedHeight: 350,
                 pinned: true,
                 backgroundColor: _getTypeColor(drink.type),
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.go('/drinks'),
                 ),
+                actions: [
+                  // Add to Cabinet Button
+                  cabinetItem.when(
+                    data: (item) {
+                      if (item != null) {
+                        return IconButton(
+                          icon: Icon(
+                            item.isWishlist ? Icons.favorite_border : Icons.favorite,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => context.go('/cabinet'),
+                          tooltip: 'View in Cabinet',
+                        );
+                      }
+                      return IconButton(
+                        icon: Icon(
+                          _isAddingToCabinet ? Icons.hourglass_empty : Icons.add_circle_outline,
+                          color: Colors.white,
+                        ),
+                        onPressed: _isAddingToCabinet ? null : () => _showAddToCabinetDialog(context, drink),
+                        tooltip: 'Add to Cabinet',
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
                     drink.name,
@@ -77,24 +121,73 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
                       ],
                     ),
                   ),
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          _getTypeColor(drink.type),
-                          _getTypeColor(drink.type).withValues(alpha: 0.7),
-                        ],
+                  background: Stack(
+                    children: [
+                      // Image carousel or hero animation
+                      drink.image != null && drink.image!.isNotEmpty
+                          ? Hero(
+                              tag: 'drink-${drink.id}',
+                              child: CachedNetworkImage(
+                                imageUrl: drink.image!,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: _getTypeColor(drink.type),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(color: Colors.white),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: _getTypeColor(drink.type),
+                                  child: Icon(
+                                    _getTypeIcon(drink.type),
+                                    size: 120,
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Hero(
+                              tag: 'drink-${drink.id}',
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      _getTypeColor(drink.type),
+                                      _getTypeColor(drink.type).withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _getTypeIcon(drink.type),
+                                    size: 120,
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                      // Gradient overlay for better text visibility
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 120,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.7),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        _getTypeIcon(drink.type),
-                        size: 120,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -313,6 +406,30 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
                           ),
                         ),
                       ],
+                      
+                      // Similar Drinks Section
+                      if (similarDrinksAsync.hasValue && similarDrinksAsync.value!.isNotEmpty) ...[  
+                        const SizedBox(height: 32),
+                        const Text(
+                          'Similar Drinks',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 180,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: similarDrinksAsync.value!.where((d) => d.id != drink.id).take(10).length,
+                            itemBuilder: (context, index) {
+                              final similarDrink = similarDrinksAsync.value!.where((d) => d.id != drink.id).toList()[index];
+                              return _buildSimilarDrinkCard(similarDrink);
+                            },
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -330,7 +447,9 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
               Text('Error: $error'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.refresh(drinkByIdProvider(widget.drinkId)),
+                onPressed: () {
+                  ref.refresh(drinkByIdProvider(widget.drinkId));
+                },
                 child: const Text('Retry'),
               ),
             ],
@@ -389,7 +508,10 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              
+              navigator.pop();
               try {
                 await ref.read(ratingNotifierProvider.notifier).deleteRating(ratingId);
                 
@@ -399,7 +521,7 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
                 ref.refresh(drinkRatingsProvider(widget.drinkId));
                 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('Rating deleted!'),
                       backgroundColor: Colors.green,
@@ -408,7 +530,7 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text('Error deleting rating: ${e.toString()}'),
                       backgroundColor: Colors.red,
@@ -506,6 +628,349 @@ class _DrinkDetailPageState extends ConsumerState<DrinkDetailPage> {
       case DrinkType.cocktail:
         return 'Cocktail';
       case DrinkType.other:
+        return 'Other';
+    }
+  }
+  
+  Widget _buildSimilarDrinkCard(Drink drink) {
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      child: InkWell(
+        onTap: () => context.go('/drinks/${drink.id}'),
+        borderRadius: BorderRadius.circular(12),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image or icon
+              Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: _getTypeColor(drink.type),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: Center(
+                  child: drink.image != null && drink.image!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          child: CachedNetworkImage(
+                            imageUrl: drink.image!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 100,
+                            placeholder: (context, url) => Icon(
+                              _getTypeIcon(drink.type),
+                              size: 40,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                            errorWidget: (context, url, error) => Icon(
+                              _getTypeIcon(drink.type),
+                              size: 40,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          _getTypeIcon(drink.type),
+                          size: 40,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                ),
+              ),
+              // Info - wrapped in Expanded to prevent overflow
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          drink.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (drink.abv != null)
+                        Text(
+                          '${drink.abv}% ABV',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _showAddToCabinetDialog(BuildContext context, Drink drink) {
+    showDialog(
+      context: context,
+      builder: (context) => _AddToCabinetDialog(drink: drink),
+    ).then((_) {
+      // Refresh cabinet item status
+      ref.refresh(cabinetItemByDrinkProvider(drink.id));
+    });
+  }
+}
+
+// Add to Cabinet Dialog
+class _AddToCabinetDialog extends ConsumerStatefulWidget {
+  final Drink drink;
+  
+  const _AddToCabinetDialog({required this.drink});
+  
+  @override
+  ConsumerState<_AddToCabinetDialog> createState() => _AddToCabinetDialogState();
+}
+
+class _AddToCabinetDialogState extends ConsumerState<_AddToCabinetDialog> {
+  CabinetStatus _selectedStatus = CabinetStatus.available;
+  StorageLocation _selectedLocation = StorageLocation.mainShelf;
+  String? _customLocation;
+  double? _purchasePrice;
+  String? _purchaseStore;
+  String? _notes;
+  final _formKey = GlobalKey<FormState>();
+  final _uuid = const Uuid();
+  
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    
+    return AlertDialog(
+      title: Text('Add "${widget.drink.name}" to Cabinet'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status selection
+              const Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              SegmentedButton<CabinetStatus>(
+                selected: {_selectedStatus},
+                onSelectionChanged: (Set<CabinetStatus> selection) {
+                  setState(() {
+                    _selectedStatus = selection.first;
+                  });
+                },
+                segments: const [
+                  ButtonSegment(
+                    value: CabinetStatus.available,
+                    label: Text('Have it'),
+                    icon: Icon(Icons.check_circle),
+                  ),
+                  ButtonSegment(
+                    value: CabinetStatus.wishlist,
+                    label: Text('Want it'),
+                    icon: Icon(Icons.favorite_border),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Location selection (only for available items)
+              if (_selectedStatus == CabinetStatus.available) ...[
+                const Text('Storage Location', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<StorageLocation>(
+                  value: _selectedLocation,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: StorageLocation.values.map((location) {
+                    return DropdownMenuItem(
+                      value: location,
+                      child: Text(_getLocationDisplayName(location)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedLocation = value!;
+                    });
+                  },
+                ),
+                if (_selectedLocation == StorageLocation.other) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Custom Location',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSaved: (value) => _customLocation = value,
+                    validator: (value) {
+                      if (_selectedLocation == StorageLocation.other && 
+                          (value == null || value.isEmpty)) {
+                        return 'Please specify location';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+                const SizedBox(height: 16),
+                
+                // Purchase info
+                const Text('Purchase Information (Optional)', 
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Price',
+                          prefixText: r'$',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onSaved: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            _purchasePrice = double.tryParse(value);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Store',
+                          border: OutlineInputBorder(),
+                        ),
+                        onSaved: (value) => _purchaseStore = value,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Notes (Optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+                onSaved: (value) => _notes = value,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: authState.isAuthenticated ? () async {
+            if (_formKey.currentState!.validate()) {
+              _formKey.currentState!.save();
+              
+              // Capture context references before async operations
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final router = GoRouter.of(context);
+              
+              // Create cabinet item
+              final now = DateTime.now();
+              final cabinetItem = CabinetItem(
+                id: _uuid.v4(), // Generate proper UUID
+                drinkId: widget.drink.id,
+                userId: authState.user!.id,
+                status: _selectedStatus,
+                addedAt: now,
+                purchaseDate: _selectedStatus == CabinetStatus.available ? now : null,
+                location: _selectedLocation,
+                customLocation: _customLocation,
+                quantity: 1,
+                purchasePrice: _purchasePrice,
+                purchaseStore: _purchaseStore,
+                personalNotes: _notes,
+                fillLevel: _selectedStatus == CabinetStatus.available ? 100 : 0,
+                createdAt: now,
+                updatedAt: now,
+              );
+              
+              try {
+                await ref.read(cabinetNotifierProvider.notifier).addToCabinet(cabinetItem);
+                refreshCabinetData(ref);
+                
+                if (mounted) {
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _selectedStatus == CabinetStatus.wishlist
+                            ? 'Added to wishlist!'
+                            : 'Added to cabinet!',
+                      ),
+                      backgroundColor: Colors.green,
+                      action: SnackBarAction(
+                        label: 'View',
+                        textColor: Colors.white,
+                        onPressed: () => router.go('/cabinet'),
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+          } : null,
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+  
+  String _getLocationDisplayName(StorageLocation location) {
+    switch (location) {
+      case StorageLocation.mainShelf:
+        return 'Main Shelf';
+      case StorageLocation.topShelf:
+        return 'Top Shelf';
+      case StorageLocation.bottomShelf:
+        return 'Bottom Shelf';
+      case StorageLocation.cabinet:
+        return 'Cabinet';
+      case StorageLocation.cellar:
+        return 'Cellar';
+      case StorageLocation.bar:
+        return 'Bar';
+      case StorageLocation.kitchen:
+        return 'Kitchen';
+      case StorageLocation.other:
         return 'Other';
     }
   }

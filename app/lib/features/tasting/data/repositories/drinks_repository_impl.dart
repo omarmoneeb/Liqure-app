@@ -90,6 +90,9 @@ class DrinksRepositoryImpl implements DrinksRepository {
             case SearchField.country:
               searchTerms.add('country ~ "${drinksFilter.search}"');
               break;
+            case SearchField.barcode:
+              searchTerms.add('barcode = "${drinksFilter.search}"');
+              break;
           }
         }
         
@@ -109,9 +112,11 @@ class DrinksRepositoryImpl implements DrinksRepository {
       // ABV range filtering
       if (drinksFilter.minAbv != null) {
         filters.add('abv >= ${drinksFilter.minAbv}');
+        print('🔍 Repository: Added ABV min filter: abv >= ${drinksFilter.minAbv}');
       }
       if (drinksFilter.maxAbv != null) {
         filters.add('abv <= ${drinksFilter.maxAbv}');
+        print('🔍 Repository: Added ABV max filter: abv <= ${drinksFilter.maxAbv}');
       }
       
       // Country filtering

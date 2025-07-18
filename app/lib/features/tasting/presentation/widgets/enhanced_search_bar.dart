@@ -267,6 +267,8 @@ class _EnhancedSearchBarState extends State<EnhancedSearchBar> {
         return 'Description';
       case SearchField.country:
         return 'Country';
+      case SearchField.barcode:
+        return 'Barcode';
     }
   }
 }

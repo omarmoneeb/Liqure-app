@@ -61,6 +61,7 @@ const _$SearchFieldEnumMap = {
   SearchField.name: 'name',
   SearchField.description: 'description',
   SearchField.country: 'country',
+  SearchField.barcode: 'barcode',
 };
 
 const _$DrinkTypeEnumMap = {

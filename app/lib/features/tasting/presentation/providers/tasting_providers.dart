@@ -1,13 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../domain/entities/drink.dart';
 import '../../domain/entities/rating.dart';
 import '../../domain/repositories/drinks_repository.dart';
 import '../../domain/repositories/ratings_repository.dart';
-import '../../data/repositories/drinks_repository_impl.dart';
-import '../../data/repositories/ratings_repository_impl.dart';
-import '../../../../core/network/pocketbase_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/database/providers/database_providers.dart';
 
 part 'tasting_providers.freezed.dart';
 part 'tasting_providers.g.dart';
@@ -30,24 +29,25 @@ enum SearchField {
   name,
   description,
   country,
+  barcode,
 }
 
-// Repository providers
+// Repository providers - now using offline-capable repositories
 final drinksRepositoryProvider = Provider<DrinksRepository>((ref) {
-  final pocketBaseClient = ref.watch(pocketBaseClientProvider);
-  return DrinksRepositoryImpl(pocketBaseClient);
+  return ref.watch(offlineDrinksRepositoryProvider);
 });
 
 final ratingsRepositoryProvider = Provider<RatingsRepository>((ref) {
-  final pocketBaseClient = ref.watch(pocketBaseClientProvider);
-  return RatingsRepositoryImpl(pocketBaseClient);
+  return ref.watch(offlineRatingsRepositoryProvider);
 });
 
 // Enhanced drinks provider with rating support
 final drinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilter?>((ref, filter) async {
   final actualFilter = filter ?? const DrinksFilter();
-  print('🎯 Enhanced DrinksProvider: Starting with filter: $actualFilter');
-  print('🎯 Enhanced DrinksProvider: activeFilters=${actualFilter.activeFilterCount}');
+  if (kDebugMode) {
+    debugPrint('🎯 Enhanced DrinksProvider: Starting with filter: $actualFilter');
+    debugPrint('🎯 Enhanced DrinksProvider: activeFilters=${actualFilter.activeFilterCount}');
+  }
   
   // Keep alive for 60 seconds to prevent unnecessary recreations
   ref.keepAlive();
@@ -55,16 +55,22 @@ final drinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilt
   final drinksRepository = ref.watch(drinksRepositoryProvider);
   final ratingsRepository = ref.watch(ratingsRepositoryProvider);
   
-  print('🎯 Enhanced DrinksProvider: Got repositories, calling enhanced getDrinksWithFilter...');
+  if (kDebugMode) {
+    debugPrint('🎯 Enhanced DrinksProvider: Got repositories, calling enhanced getDrinksWithFilter...');
+  }
   
   try {
     // Get drinks from repository (without rating filters applied at DB level)
     final drinks = await drinksRepository.getDrinksWithFilter(actualFilter);
-    print('🎯 Enhanced DrinksProvider: Got ${drinks.length} drinks from repository');
+    if (kDebugMode) {
+      debugPrint('🎯 Enhanced DrinksProvider: Got ${drinks.length} drinks from repository');
+    }
     
     // Apply client-side rating filtering if rating filters are active
     if (_hasRatingFilters(actualFilter)) {
-      print('🎯 Enhanced DrinksProvider: Applying client-side rating filters...');
+      if (kDebugMode) {
+        debugPrint('🎯 Enhanced DrinksProvider: Applying client-side rating filters...');
+      }
       
       // Get all ratings for these drinks
       final drinkIds = drinks.map((d) => d.id).toList();
@@ -73,15 +79,21 @@ final drinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilt
       // Filter drinks based on rating criteria
       final filteredDrinks = _applyRatingFilters(drinks, ratingsMap, actualFilter);
       
-      print('🎯 Enhanced DrinksProvider: After rating filtering: ${filteredDrinks.length} drinks');
+      if (kDebugMode) {
+        debugPrint('🎯 Enhanced DrinksProvider: After rating filtering: ${filteredDrinks.length} drinks');
+      }
       return filteredDrinks;
     }
     
-    print('🎯 Enhanced DrinksProvider: No rating filters, returning ${drinks.length} drinks');
+    if (kDebugMode) {
+      debugPrint('🎯 Enhanced DrinksProvider: No rating filters, returning ${drinks.length} drinks');
+    }
     return drinks;
   } catch (e, stackTrace) {
-    print('❌ Enhanced DrinksProvider: Error getting drinks: $e');
-    print('❌ Enhanced DrinksProvider: Stack trace: $stackTrace');
+    if (kDebugMode) {
+      debugPrint('❌ Enhanced DrinksProvider: Error getting drinks: $e');
+      debugPrint('❌ Enhanced DrinksProvider: Stack trace: $stackTrace');
+    }
     rethrow;
   }
 });
@@ -107,7 +119,9 @@ Future<Map<String, List<Rating>>> _getDrinkRatingsMap(
       final ratings = await ratingsRepository.getDrinkRatings(drinkId);
       ratingsMap[drinkId] = ratings;
     } catch (e) {
-      print('⚠️ Failed to get ratings for drink $drinkId: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Failed to get ratings for drink $drinkId: $e');
+      }
       ratingsMap[drinkId] = [];
     }
   }
@@ -164,8 +178,10 @@ List<Drink> _applyRatingFilters(
 
 // Legacy drinks provider for backward compatibility
 final legacyDrinksProvider = FutureProvider.autoDispose.family<List<Drink>, DrinksFilter?>((ref, filter) async {
-  print('🎯 Legacy DrinksProvider: Starting with filter: $filter');
-  print('🎯 Legacy DrinksProvider: search=${filter?.search}, type=${filter?.type}');
+  if (kDebugMode) {
+    debugPrint('🎯 Legacy DrinksProvider: Starting with filter: $filter');
+    debugPrint('🎯 Legacy DrinksProvider: search=${filter?.search}, type=${filter?.type}');
+  }
   
   ref.keepAlive();
   
@@ -179,10 +195,14 @@ final legacyDrinksProvider = FutureProvider.autoDispose.family<List<Drink>, Drin
       perPage: filter?.perPage ?? 50,
     );
     
-    print('🎯 Legacy DrinksProvider: Successfully got ${drinks.length} drinks from repository');
+    if (kDebugMode) {
+      debugPrint('🎯 Legacy DrinksProvider: Successfully got ${drinks.length} drinks from repository');
+    }
     return drinks;
   } catch (e, stackTrace) {
-    print('❌ Legacy DrinksProvider: Error getting drinks: $e');
+    if (kDebugMode) {
+      debugPrint('❌ Legacy DrinksProvider: Error getting drinks: $e');
+    }
     rethrow;
   }
 });

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/rating.dart';
@@ -239,7 +241,9 @@ class _RatingSubmissionDialogState extends ConsumerState<RatingSubmissionDialog>
       // REAL-TIME DASHBOARD UPDATES: Refresh dashboard statistics after rating changes
       final dashboardRefresh = ref.read(dashboardRefreshProvider);
       dashboardRefresh();
-      print('🔄 Rating: Dashboard refresh triggered after rating submission');
+      if (kDebugMode) {
+        debugPrint('🔄 Rating: Dashboard refresh triggered after rating submission');
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
