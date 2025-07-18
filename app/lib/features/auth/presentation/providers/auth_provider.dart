@@ -5,15 +5,29 @@ import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_up_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/offline_auth_repository.dart';
 import '../../../../core/network/pocketbase_client.dart';
+import '../../../../core/error/auth_error_handler.dart';
 
 // Shared Preferences provider
 final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
   return await SharedPreferences.getInstance();
 });
 
-// Auth Repository provider
-final authRepositoryProvider = Provider<AuthRepositoryImpl?>((ref) {
+// Auth Repository provider - now uses offline-first repository
+final authRepositoryProvider = Provider<OfflineAuthRepository?>((ref) {
+  final pocketBaseClient = ref.watch(pocketBaseClientProvider);
+  final sharedPrefsAsync = ref.watch(sharedPreferencesProvider);
+  
+  return sharedPrefsAsync.when(
+    data: (sharedPrefs) => OfflineAuthRepository(pocketBaseClient, sharedPrefs),
+    loading: () => null,
+    error: (error, stack) => null,
+  );
+});
+
+// Legacy Auth Repository provider for backward compatibility
+final legacyAuthRepositoryProvider = Provider<AuthRepositoryImpl?>((ref) {
   final pocketBaseClient = ref.watch(pocketBaseClientProvider);
   final sharedPrefsAsync = ref.watch(sharedPreferencesProvider);
   
@@ -71,7 +85,7 @@ class AuthState {
 
 // Auth State Notifier
 class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepositoryImpl? _authRepository;
+  final OfflineAuthRepository? _authRepository;
   final SignInUseCase? _signInUseCase;
   final SignUpUseCase? _signUpUseCase;
   final SignOutUseCase? _signOutUseCase;
@@ -113,10 +127,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
       }
     } catch (e) {
+      // Even if auth check fails, don't show error - just proceed as unauthenticated
+      // This prevents app crashes when offline
       state = state.copyWith(
-        error: e.toString(),
-        isLoading: false,
         isAuthenticated: false,
+        isLoading: false,
+        error: null, // Don't show error for auth check failures
       );
     }
   }
@@ -134,7 +150,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: AuthErrorHandler.getErrorMessage(e),
         isLoading: false,
         isAuthenticated: false,
       );
@@ -154,7 +170,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: AuthErrorHandler.getErrorMessage(e),
         isLoading: false,
         isAuthenticated: false,
       );
@@ -170,7 +186,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState();
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: AuthErrorHandler.getErrorMessage(e),
         isLoading: false,
       );
     }
@@ -185,7 +201,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(
-        error: e.toString(),
+        error: AuthErrorHandler.getErrorMessage(e),
         isLoading: false,
       );
     }
@@ -193,6 +209,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void clearError() {
     state = state.copyWith(error: null);
+  }
+  
+  /// Enable demo mode for testing without authentication
+  Future<void> enableDemoMode() async {
+    if (_authRepository == null) return;
+    
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _authRepository!.enableDemoMode();
+      final user = await _authRepository!.getCurrentUser();
+      state = state.copyWith(
+        user: user,
+        isAuthenticated: true,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        error: AuthErrorHandler.getErrorMessage(e),
+        isLoading: false,
+        isAuthenticated: false,
+      );
+    }
+  }
+  
+  /// Check if demo mode is enabled
+  Future<bool> isDemoModeEnabled() async {
+    if (_authRepository == null) return false;
+    return await _authRepository!.isDemoModeEnabled();
+  }
+  
+  /// Disable demo mode
+  Future<void> disableDemoMode() async {
+    if (_authRepository == null) return;
+    
+    state = state.copyWith(isLoading: true);
+    try {
+      await _authRepository!.disableDemoMode();
+      state = AuthState();
+    } catch (e) {
+      state = state.copyWith(
+        error: AuthErrorHandler.getErrorMessage(e),
+        isLoading: false,
+      );
+    }
   }
 }
 
