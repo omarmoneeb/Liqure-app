@@ -1,0 +1,81 @@
+{
+  "sessionId": "session-1752782973972-stw03e1oq",
+  "checkpointId": "checkpoint-1752783003974-n43ptxmqg",
+  "checkpointName": "auto-save-1752783003974",
+  "timestamp": "2025-07-17T20:10:03.975Z",
+  "data": {
+    "timestamp": "2025-07-17T20:10:03.974Z",
+    "changeCount": 5,
+    "changesByType": {
+      "swarm_created": [
+        {
+          "type": "swarm_created",
+          "data": {
+            "swarmId": "swarm-1752782973971-yiyoas3om",
+            "swarmName": "hive-1752782973906",
+            "objective": "There are some issues happening in the app like flutter: ❌ CabinetRepository: Error getting cabinet stats: Exception: Failed to get cabinet items: FormatException: Invalid date format, flutter: ❌ OfflineRatingsRepository: Error getting average rating: type 'Null' is not a subtype of type 'double' in type cast. These are not the only problems when I run the app on my personal device, it doesn't connect to the server, Also if I unpluged the phone from the laptop, the app craches and never opens.",
+            "workerCount": 8
+          },
+          "timestamp": "2025-07-17T20:09:33.973Z"
+        }
+      ],
+      "agent_activity": [
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752782973971-yiyoas3om-0",
+            "activity": "spawned",
+            "data": {
+              "type": "researcher",
+              "name": "Researcher Worker 1"
+            }
+          },
+          "timestamp": "2025-07-17T20:09:33.974Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752782973971-yiyoas3om-1",
+            "activity": "spawned",
+            "data": {
+              "type": "coder",
+              "name": "Coder Worker 2"
+            }
+          },
+          "timestamp": "2025-07-17T20:09:33.974Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752782973971-yiyoas3om-2",
+            "activity": "spawned",
+            "data": {
+              "type": "analyst",
+              "name": "Analyst Worker 3"
+            }
+          },
+          "timestamp": "2025-07-17T20:09:33.974Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752782973971-yiyoas3om-3",
+            "activity": "spawned",
+            "data": {
+              "type": "tester",
+              "name": "Tester Worker 4"
+            }
+          },
+          "timestamp": "2025-07-17T20:09:33.974Z"
+        }
+      ]
+    },
+    "statistics": {
+      "tasksProcessed": 0,
+      "tasksCompleted": 0,
+      "memoryUpdates": 0,
+      "agentActivities": 4,
+      "consensusDecisions": 0
+    }
+  }
+}

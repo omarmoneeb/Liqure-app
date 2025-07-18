@@ -1,0 +1,81 @@
+{
+  "sessionId": "session-1752605510096-1aixhfzdx",
+  "checkpointId": "checkpoint-1752605540097-m2qvm1vix",
+  "checkpointName": "auto-save-1752605540097",
+  "timestamp": "2025-07-15T18:52:20.099Z",
+  "data": {
+    "timestamp": "2025-07-15T18:52:20.097Z",
+    "changeCount": 5,
+    "changesByType": {
+      "swarm_created": [
+        {
+          "type": "swarm_created",
+          "data": {
+            "swarmId": "swarm-1752605510095-4atfhvpaf",
+            "swarmName": "hive-1752605510086",
+            "objective": "Analyze this project, \n  and improve EVERYTHING IN IT. I WANT EVERYTHING THAT HAS BEEN\n   BUILT SO FAR TO BE WORKING PERFECTLY",
+            "workerCount": 8
+          },
+          "timestamp": "2025-07-15T18:51:50.096Z"
+        }
+      ],
+      "agent_activity": [
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752605510095-4atfhvpaf-0",
+            "activity": "spawned",
+            "data": {
+              "type": "researcher",
+              "name": "Researcher Worker 1"
+            }
+          },
+          "timestamp": "2025-07-15T18:51:50.097Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752605510095-4atfhvpaf-1",
+            "activity": "spawned",
+            "data": {
+              "type": "coder",
+              "name": "Coder Worker 2"
+            }
+          },
+          "timestamp": "2025-07-15T18:51:50.097Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752605510095-4atfhvpaf-2",
+            "activity": "spawned",
+            "data": {
+              "type": "analyst",
+              "name": "Analyst Worker 3"
+            }
+          },
+          "timestamp": "2025-07-15T18:51:50.097Z"
+        },
+        {
+          "type": "agent_activity",
+          "data": {
+            "agentId": "worker-swarm-1752605510095-4atfhvpaf-3",
+            "activity": "spawned",
+            "data": {
+              "type": "tester",
+              "name": "Tester Worker 4"
+            }
+          },
+          "timestamp": "2025-07-15T18:51:50.097Z"
+        }
+      ]
+    },
+    "statistics": {
+      "tasksProcessed": 0,
+      "tasksCompleted": 0,
+      "memoryUpdates": 0,
+      "agentActivities": 4,
+      "consensusDecisions": 0
+    }
+  }
+}
